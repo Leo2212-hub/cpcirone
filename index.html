@@ -1114,5 +1114,22 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementB
     }
   });
 </script>
+  <script>
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+      try {
+        // Refresca la sesión primero
+        await sb.auth.refreshSession();
+        const { data: { session } } = await sb.auth.getSession();
+        if (session && currentUser) {
+          await loadAll();
+          renderAll();
+        }
+      } catch (e) {
+        console.log('Error al refrescar:', e);
+      }
+    }
+  });
+</script>
 </body>
 </html>

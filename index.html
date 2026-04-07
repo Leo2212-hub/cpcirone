@@ -1090,12 +1090,19 @@ function renderAll(){
 
 // Enter en login
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('setup-screen').classList.contains('show'))authAction();});
-</script>
-  <script>
-  document.querySelectorAll('a[href^="http"]').forEach(link => {
-    link.setAttribute('target', '_blank');
-    link.setAttribute('rel', 'noopener noreferrer');
-  });
+<script>
+  function fixExternalLinks(root = document) {
+    root.querySelectorAll('a[href^="http"]').forEach(link => {
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+    });
+  }
+  // Observa cuando se agrega contenido nuevo al DOM
+  const observer = new MutationObserver(() => fixExternalLinks());
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // También aplicar al cargar
+  fixExternalLinks();
 </script>
 </body>
 </html>

@@ -1097,12 +1097,22 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementB
       link.setAttribute('rel', 'noopener noreferrer');
     });
   }
+  <script>
   // Observa cuando se agrega contenido nuevo al DOM
   const observer = new MutationObserver(() => fixExternalLinks());
   observer.observe(document.body, { childList: true, subtree: true });
 
   // También aplicar al cargar
   fixExternalLinks();
+</script>
+<script>
+  // Recarga datos cuando el usuario vuelve a la pestaña
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && currentUser) {
+      await loadAll();
+      renderAll();
+    }
+  });
 </script>
 </body>
 </html>

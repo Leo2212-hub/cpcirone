@@ -1091,5 +1091,11 @@ function renderAll(){
 // Enter en login
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('setup-screen').classList.contains('show'))authAction();});
 </script>
+  <script>
+  document.querySelectorAll('a[href^="http"]').forEach(link => {
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+  });
+</script>
 </body>
 </html>

@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estudio Contable — Panel de Gestión</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#F5F3EE;--surface:#FFF;--surface2:#F0EDE6;--border:#E2DDD4;
+  --text:#1A1814;--text2:#6B6560;--text3:#A09A93;
+  --accent:#2D5016;--accent-light:#EAF0E0;
+  --danger:#C0392B;--danger-light:#FDECEA;
+  --warn:#B7791F;--warn-light:#FEF3E2;
+  --ok:#276749;--ok-light:#E6F4EE;
+  --blue:#1A4A7A;--blue-light:#E8F0F8;
+  --afip:#00529B;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --radius:10px;--radius-lg:16px;--shadow:0 2px 12px rgba(0,0,0,0.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px}
+#loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;gap:16px}
+#loading-screen h1{font-family:var(--serif);font-size:28px;color:var(--text)}
+#loading-screen p{font-size:13px;color:var(--text3)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0 0 1rem}
+.sidebar-brand{padding:1.5rem 1.25rem 1.25rem;border-bottom:1px solid var(--border);margin-bottom:.75rem}
+.sidebar-brand h1{font-family:var(--serif);font-size:20px;color:var(--text);line-height:1.2}
+.sidebar-brand span{font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.sidebar-status{display:flex;align-items:center;margin-top:6px;font-size:11px;color:var(--ok)}
+.sidebar-status.offline{color:var(--warn)}
+.nav{flex:1;padding:0 .75rem;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);font-size:13px;font-weight:400;color:var(--text2);cursor:pointer;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--accent);color:white;font-weight:500}
+.nav-item svg{flex-shrink:0;opacity:.8}
+.nav-badge{margin-left:auto;background:var(--danger);color:white;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
+.nav-item.active .nav-badge{background:rgba(255,255,255,.3)}
+.nav-sep{height:1px;background:var(--border);margin:6px .75rem}
+.sidebar-footer{padding:.75rem 1rem 0;border-top:1px solid var(--border);font-size:11px;color:var(--text3)}
+.sidebar-footer strong{display:block;color:var(--text2);font-size:12px;font-weight:500}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.875rem 1.75rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left h2{font-family:var(--serif);font-size:22px}
+.topbar-left p{font-size:12px;color:var(--text3);margin-top:1px}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.btn{padding:7px 14px;border-radius:var(--radius);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--bg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:white;border-color:var(--accent)}
+.btn-primary:hover{background:#234010}
+.btn-afip{background:var(--afip);color:white;border-color:var(--afip)}
+.btn-afip:hover{background:#003d7a}
+.btn-danger{background:var(--danger);color:white;border-color:var(--danger)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.content{flex:1;overflow-y:auto;padding:1.5rem 1.75rem}
+.section{display:none}
+.section.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem;box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.card-title{font-family:var(--serif);font-size:17px}
+.card-subtitle{font-size:12px;color:var(--text3);margin-top:2px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:1.25rem}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;box-shadow:var(--shadow)}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.stat-value{font-family:var(--serif);font-size:26px;line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.stat-ok .stat-value{color:var(--ok)}
+.stat-warn .stat-value{color:var(--warn)}
+.stat-danger .stat-value{color:var(--danger)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-ok{background:var(--ok-light);color:var(--ok)}
+.badge-warn{background:var(--warn-light);color:var(--warn)}
+.badge-danger{background:var(--danger-light);color:var(--danger)}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-neutral{background:var(--surface2);color:var(--text2)}
+.badge-accent{background:var(--accent-light);color:var(--accent)}
+.badge-afip{background:#ddeeff;color:var(--afip)}
+.avatar{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;background:var(--accent-light);color:var(--accent)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.venc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.venc-row:last-child{border-bottom:none}
+.venc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-danger{background:var(--danger)}.dot-warn{background:var(--warn)}.dot-ok{background:var(--ok)}
+.prog-row{margin-bottom:14px}
+.prog-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:5px}
+.prog-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,.2);padding:1.75rem;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:var(--serif);font-size:20px;margin-bottom:1.25rem}
+.form-row{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input[type=text],input[type=email],input[type=number],input[type=date],input[type=password],select,textarea{width:100%;padding:9px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);font-family:var(--sans);font-size:13px;color:var(--text);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);background:white}
+textarea{height:80px;resize:vertical}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3)}
+.empty p{font-size:14px}
+.search-wrap{position:relative}
+.search-wrap input{padding-left:32px}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+.tabs{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:var(--radius);margin-bottom:1rem;width:fit-content}
+.tab{padding:6px 16px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--text2);transition:all .15s;border:none;background:none;font-family:var(--sans)}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1);font-weight:500}
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.alert-danger{background:var(--danger-light);color:var(--danger);border:1px solid #F5C6C2}
+.alert-afip{background:#ddeeff;color:var(--afip);border:1px solid #aaccee}
+.alert-ok{background:var(--ok-light);color:var(--ok);border:1px solid #b0d8c0}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:white;padding:10px 18px;border-radius:var(--radius);font-size:13px;z-index:999;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1;transform:translateY(0)}
+.action-btn{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:6px;transition:all .15s}
+.action-btn:hover{color:var(--text);background:var(--bg)}
+.action-btn.del:hover{color:var(--danger)}
+.ficha{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ficha-key{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.ficha-val{font-size:13px;font-weight:500}
+.afip-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.afip-link{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:var(--radius);border:1px solid #aaccee;background:#f0f6ff;cursor:pointer;text-decoration:none;transition:all .15s}
+.afip-link:hover{background:#ddeeff;border-color:var(--afip)}
+.afip-link-title{font-size:13px;font-weight:500;color:var(--afip)}
+.afip-link-desc{font-size:11px;color:#5577aa}
+.sugs-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.sug-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg)}
+.sug-item label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;flex:1}
+.sug-item input[type=checkbox]{width:auto}
+.confirm-modal .modal{width:340px;text-align:center}
+.confirm-msg{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+.confirm-actions{display:flex;gap:8px;justify-content:center}
+.user-tag{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 10px}
+.user-avatar{width:22px;height:22px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+#setup-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:900}
+#setup-screen.show{display:flex}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem;width:420px;box-shadow:var(--shadow)}
+.setup-title{font-family:var(--serif);font-size:24px;margin-bottom:.5rem}
+.setup-sub{font-size:13px;color:var(--text3);margin-bottom:1.5rem}
+.setup-tabs{display:flex;gap:0;margin-bottom:1.5rem;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.setup-tab{flex:1;padding:8px;font-size:13px;cursor:pointer;border:none;background:none;font-family:var(--sans);color:var(--text2);transition:all .15s}
+.setup-tab.active{background:var(--accent);color:white;font-weight:500}
+.setup-error{font-size:12px;color:var(--danger);margin-top:8px;display:none}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.afip-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <h1>Estudio Contable</h1>
+  <p id="loading-msg">Conectando con la base de datos...</p>
+</div>
+
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-title">Estudio Contable</div>
+    <div class="setup-sub">Ingresá con tu cuenta para acceder al panel</div>
+    <div class="setup-tabs">
+      <button class="setup-tab active" onclick="setSetupTab('login',this)">Iniciar sesión</button>
+      <button class="setup-tab" onclick="setSetupTab('register',this)">Crear cuenta</button>
+    </div>
+    <div class="form-row"><label class="form-label">Email</label><input type="email" id="auth-email" placeholder="tu@email.com"></div>
+    <div class="form-row"><label class="form-label">Contraseña</label><input type="password" id="auth-pass" placeholder="••••••••"></div>
+    <div class="form-row" id="auth-name-row" style="display:none"><label class="form-label">Tu nombre</label><input type="text" id="auth-name" placeholder="Dr. García"></div>
+    <div id="auth-error" class="setup-error"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:.5rem" id="auth-btn" onclick="authAction()">Ingresar</button>
+    <p style="font-size:11px;color:var(--text3);margin-top:1rem;text-align:center">Los datos se guardan en tu base de datos Supabase</p>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none">
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <h1>Estudio<br>Contable</h1>
+      <span>Panel de gestión</span>
+      <div class="sidebar-status" id="sync-status"><span class="sync-dot"></span>Sincronizado</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="nav('inicio',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Inicio
+      </button>
+      <button class="nav-item" onclick="nav('clientes',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Clientes
+      </button>
+      <button class="nav-item" onclick="nav('vencimientos',this)" id="nav-venc">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Vencimientos
+        <span class="nav-badge" id="badge-venc" style="display:none">0</span>
+      </button>
+      <button class="nav-item" onclick="nav('cobros',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Cobros
+      </button>
+      <button class="nav-item" onclick="nav('reportes',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Reportes
+      </button>
+      <div class="nav-sep"></div>
+      <button class="nav-item" onclick="nav('afip',this)" style="color:var(--afip)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>AFIP / Accesos
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-tag" style="margin-bottom:8px">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name">...</span>
+      </div>
+      <button class="btn btn-sm" style="width:100%;justify-content:center;font-size:11px" onclick="logout()">Cerrar sesión</button>
+      <div style="margin-top:8px;font-size:11px;color:var(--text3)" id="sf-date"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left"><h2 id="page-title">Inicio</h2><p id="page-sub">Resumen del día</p></div>
+      <div class="topbar-right" id="topbar-actions"></div>
+    </div>
+    <div class="content">
+      <div class="section active" id="s-inicio">
+        <div class="stats-grid" id="dash-stats"></div>
+        <div class="two-col">
+          <div class="card"><div class="card-header"><div><div class="card-title">Próximos vencimientos</div><div class="card-subtitle">Siguientes 15 días</div></div></div><div id="dash-venc"></div></div>
+          <div class="card"><div class="card-header"><div><div class="card-title">Cobros pendientes</div></div></div><div id="dash-cobros"></div></div>
+        </div>
+      </div>
+      <div class="section" id="s-clientes">
+        <div class="card">
+          <div class="card-header">
+            <div class="search-wrap" style="width:220px">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" placeholder="Buscar..." id="search-clientes" oninput="renderClientes()">
+            </div>
+            <select id="filter-categoria" onchange="renderClientes()" style="width:auto;font-size:12px">
+              <option value="">Todas las categorías</option><option>Responsable Inscripto</option><option>Monotributo</option><option>Exento</option><option>Otro</option>
+            </select>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>CUIT</th><th>Categoría</th><th>Email</th><th>Teléfono</th><th>Honorario</th><th>Estado</th><th></th></tr></thead><tbody id="tabla-clientes"></tbody></table></div>
+          <div id="empty-clientes" class="empty" style="display:none"><p>No hay clientes todavía.</p></div>
+        </div>
+      </div>
+      <div class="section" id="s-vencimientos">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+          <div class="tabs">
+            <button class="tab active" onclick="filterVenc('todos',this)">Todos</button>
+            <button class="tab" onclick="filterVenc('pendiente',this)">Pendientes</button>
+            <button class="tab" onclick="filterVenc('completado',this)">Completados</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="filter-venc-cliente" onchange="renderVencimientos()" style="width:auto;font-size:12px;max-width:180px"><option value="">Todos los clientes</option></select>
+            <select id="filter-venc-tipo" onchange="renderVencimientos()" style="width:auto;font-size:12px">
+              <option value="">Todos los tipos</option><option>IVA mensual</option><option>Ganancias</option><option>Ingresos Brutos</option><option>Balance anual</option><option>Monotributo</option><option>Otro</option>
+            </select>
+          </div>
+        </div>
+        <div id="alert-venc"></div>
+        <div class="card">
+          <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Responsable</th><th>Origen</th><th>Estado</th><th>Notas</th><th></th></tr></thead><tbody id="tabla-vencimientos"></tbody></table></div>
+          <div id="empty-venc" class="empty" style="display:none"><p>No hay tareas. Agregá la primera o importá desde AFIP.</p></div>
+        </div>
+      </div>
+      <div class="section" id="s-cobros">
+        <div class="stats-grid" id="cobros-stats"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="tabs" style="margin-bottom:0">
+              <button class="tab active" onclick="filterCobros('todos',this)">Todos</button>
+              <button class="tab" onclick="filterCobros('pendiente',this)">Pendientes</button>
+              <button class="tab" onclick="filterCobros('cobrado',this)">Cobrados</button>
+              <button class="tab" onclick="filterCobros('vencido',this)">Vencidos</button>
+            </div>
+            <select id="filter-cobros-cliente" onchange="renderCobros()" style="width:auto;font-size:12px;max-width:180px"><option value="">Todos los clientes</option></select>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Concepto</th><th>Importe</th><th>Vencimiento</th><th>Fecha cobro</th><th>Medio</th><th>Estado</th><th></th></tr></thead><tbody id="tabla-cobros"></tbody></table></div>
+          <div id="empty-cobros" class="empty" style="display:none"><p>No hay cobros registrados.</p></div>
+        </div>
+      </div>
+      <div class="section" id="s-reportes">
+        <div class="two-col">
+          <div class="card"><div class="card-header"><div class="card-title">Clientes por categoría</div></div><div id="rep-categorias"></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">Tareas por tipo</div></div><div id="rep-tareas"></div></div>
+        </div>
+        <div class="card"><div class="card-header"><div class="card-title">Resumen de cobros</div></div><div id="rep-cobros-resumen"></div></div>
+      </div>
+      <div class="section" id="s-afip">
+        <div class="alert alert-afip" style="margin-bottom:1.25rem">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+          Calendario oficial AFIP 2026. Los accesos directos abren el sitio oficial en nueva pestaña.
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Calendario AFIP 2026</div><div class="card-subtitle">Fechas según terminación de CUIT</div></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="afip-cat" onchange="renderCalendarioAfip()" style="width:auto;font-size:12px"><option value="RI">Responsable Inscripto</option><option value="MONO">Monotributo</option></select>
+              <select id="afip-mes" onchange="renderCalendarioAfip()" style="width:auto;font-size:12px">
+                <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+              </select>
+            </div>
+          </div>
+          <div id="cal-afip-tabla"></div>
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Importar vencimientos para un cliente</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="afip-import-cliente" style="width:auto;font-size:13px;min-width:200px"><option value="">— Seleccioná un cliente —</option></select>
+              <button class="btn btn-afip" onclick="abrirImportAfip()">Sugerir vencimientos del mes</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Accesos directos AFIP</div></div>
+          <div class="afip-grid">
+            <a class="afip-link" href="https://auth.afip.gob.ar/contribuyente_/login.xhtml" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🔐 Clave Fiscal</div><div class="afip-link-desc">Acceso con CUIT y clave</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/vencimientosPortal/Default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📅 Vencimientos AFIP</div><div class="afip-link-desc">Calendario oficial</div></a>
+            <a class="afip-link" href="https://www.afip.gob.ar/monotributo/acceso.asp" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📋 Monotributo</div><div class="afip-link-desc">Portal simplificado</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/IVA/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🧾 IVA en línea</div><div class="afip-link-desc">Declaración jurada</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/SIAP/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">💻 SIAP</div><div class="afip-link-desc">Sistema Integrado</div></a>
+            <a class="afip-link" href="https://www.afip.gob.ar/genericos/formularios/formularios.asp" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📄 Formularios</div><div class="afip-link-desc">Descarga oficial</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/ganancias4/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">💰 Ganancias F.711</div><div class="afip-link-desc">DDJJ anual</div></a>
+            <a class="afip-link" href="https://www.afip.gob.ar/institucional/estudiosContables.asp" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🏢 Estudios Contables</div><div class="afip-link-desc">Portal para contadores</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/constanciaInscripcion/Default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📃 Constancia Inscripción</div><div class="afip-link-desc">Consulta y descarga</div></a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Consulta rápida por CUIT</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1;min-width:200px"><label class="form-label">CUIT</label><input type="text" id="cuit-consulta" placeholder="20-12345678-9"></div>
+            <button class="btn btn-afip" onclick="consultarCuit()">Consultar en AFIP</button>
+            <button class="btn" onclick="window.open('https://serviciosweb.afip.gob.ar/genericos/constanciaInscripcion/Default.aspx','_blank')">Ver constancia</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALES -->
+<div class="modal-bg" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-title" id="mc-title">Nuevo cliente</div>
+    <div class="form-grid">
+      <div class="form-row" style="grid-column:1/-1"><label class="form-label">Nombre / Razón social *</label><input type="text" id="mc-nombre" placeholder="García & Asociados SRL"></div>
+      <div class="form-row"><label class="form-label">CUIT</label><input type="text" id="mc-cuit" placeholder="20-12345678-9"></div>
+      <div class="form-row"><label class="form-label">Categoría</label><select id="mc-cat"><option>Responsable Inscripto</option><option>Monotributo</option><option>Exento</option><option>Otro</option></select></div>
+      <div class="form-row"><label class="form-label">Email</label><input type="email" id="mc-email" placeholder="contacto@empresa.com"></div>
+      <div class="form-row"><label class="form-label">Teléfono</label><input type="text" id="mc-tel" placeholder="221-1234567"></div>
+      <div class="form-row"><label class="form-label">Honorario mensual ($)</label><input type="number" id="mc-honorario" placeholder="0"></div>
+      <div class="form-row"><label class="form-label">Estado</label><select id="mc-estado"><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option></select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Notas</label><textarea id="mc-notas"></textarea></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-cliente')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-cliente" onclick="guardarCliente()">Guardar cliente</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="modal-venc">
+  <div class="modal">
+    <div class="modal-title" id="mv-title">Nueva tarea</div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">Cliente *</label><select id="mv-cliente"></select></div>
+      <div class="form-row"><label class="form-label">Tipo *</label><select id="mv-tipo"><option>IVA mensual</option><option>Ganancias</option><option>Ingresos Brutos</option><option>Balance anual</option><option>Monotributo</option><option>Otro</option></select></div>
+      <div class="form-row"><label class="form-label">Fecha *</label><input type="date" id="mv-fecha"></div>
+      <div class="form-row"><label class="form-label">Responsable</label><input type="text" id="mv-resp" placeholder="Dr. García"></div>
+      <div class="form-row"><label class="form-label">Estado</label><select id="mv-estado"><option value="pendiente">Pendiente</option><option value="en-proceso">En proceso</option><option value="completado">Completado</option></select></div>
+    </div>
+    <div class="form-row"><label class="form-label">Notas</label><textarea id="mv-notas"></textarea></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-venc')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-venc" onclick="guardarVencimiento()">Guardar tarea</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="modal-cobro">
+  <div class="modal">
+    <div class="modal-title" id="mcob-title">Registrar cobro</div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">Cliente *</label><select id="mcob-cliente"></select></div>
+      <div class="form-row"><label class="form-label">Concepto *</label><input type="text" id="mcob-concepto" placeholder="Honorarios Abril"></div>
+      <div class="form-row"><label class="form-label">Importe ($) *</label><input type="number" id="mcob-importe" placeholder="0"></div>
+      <div class="form-row"><label class="form-label">Vencimiento</label><input type="date" id="mcob-venc"></div>
+      <div class="form-row"><label class="form-label">Fecha cobro</label><input type="date" id="mcob-fecha"></div>
+      <div class="form-row"><label class="form-label">Medio de pago</label><select id="mcob-medio"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option><option>Otro</option></select></div>
+      <div class="form-row" style="grid-column:1/-1"><label class="form-label">Estado</label><select id="mcob-estado"><option value="pendiente">Pendiente</option><option value="cobrado">Cobrado</option><option value="vencido">Vencido</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-cobro')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-cobro" onclick="guardarCobro()">Guardar cobro</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="modal-ficha">
+  <div class="modal"><div id="ficha-content"></div><div class="modal-footer"><button class="btn" onclick="closeModal('modal-ficha')">Cerrar</button></div></div>
+</div>
+<div class="modal-bg" id="modal-import-afip">
+  <div class="modal">
+    <div class="modal-title" id="mia-title">Vencimientos AFIP</div>
+    <div id="mia-sub" style="font-size:13px;color:var(--text2);margin-bottom:1rem"></div>
+    <div class="alert alert-afip" style="margin-bottom:1rem;font-size:12px">Seleccioná las tareas a agregar. Fechas según calendario AFIP 2026.</div>
+    <div class="sugs-list" id="sugs-list"></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-import-afip')">Cancelar</button><button class="btn btn-afip" onclick="importarSugeridas()">Importar seleccionadas</button></div>
+  </div>
+</div>
+<div class="modal-bg confirm-modal" id="modal-confirm">
+  <div class="modal" style="width:340px;text-align:center">
+    <div class="modal-title" id="confirm-title">¿Eliminar?</div>
+    <p class="confirm-msg" id="confirm-msg">Esta acción no se puede deshacer.</p>
+    <div class="confirm-actions"><button class="btn" onclick="closeModal('modal-confirm')">Cancelar</button><button class="btn btn-danger" id="confirm-ok">Eliminar</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════
+const SUPABASE_URL = 'https://bwsrvaozpwhufnqowjej.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3c3J2YW96cHdodWZucW93amVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzQxMjMsImV4cCI6MjA5MTE1MDEyM30.ui0YDGKHWTv1hmlL5rnCg5nrcZ9JdGZJfl5vAQ3lB9Q';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════
+// AFIP 2026
+// ═══════════════════════════════════════════
+const AFIP={
+  IVA_RI:{1:{0:'2026-01-20',1:'2026-01-21',2:'2026-01-22',3:'2026-01-23',4:'2026-01-26',5:'2026-01-27',6:'2026-01-28',7:'2026-01-29',8:'2026-01-30',9:'2026-02-02'},2:{0:'2026-02-18',1:'2026-02-19',2:'2026-02-20',3:'2026-02-23',4:'2026-02-24',5:'2026-02-25',6:'2026-02-26',7:'2026-02-27',8:'2026-03-02',9:'2026-03-03'},3:{0:'2026-03-18',1:'2026-03-19',2:'2026-03-20',3:'2026-03-23',4:'2026-03-24',5:'2026-03-25',6:'2026-03-26',7:'2026-03-27',8:'2026-03-30',9:'2026-03-31'},4:{0:'2026-04-20',1:'2026-04-21',2:'2026-04-22',3:'2026-04-23',4:'2026-04-24',5:'2026-04-27',6:'2026-04-28',7:'2026-04-29',8:'2026-04-30',9:'2026-05-04'},5:{0:'2026-05-19',1:'2026-05-20',2:'2026-05-21',3:'2026-05-22',4:'2026-05-25',5:'2026-05-26',6:'2026-05-27',7:'2026-05-28',8:'2026-05-29',9:'2026-06-01'},6:{0:'2026-06-18',1:'2026-06-19',2:'2026-06-22',3:'2026-06-23',4:'2026-06-24',5:'2026-06-25',6:'2026-06-26',7:'2026-06-29',8:'2026-06-30',9:'2026-07-01'},7:{0:'2026-07-20',1:'2026-07-21',2:'2026-07-22',3:'2026-07-23',4:'2026-07-24',5:'2026-07-27',6:'2026-07-28',7:'2026-07-29',8:'2026-07-30',9:'2026-07-31'},8:{0:'2026-08-19',1:'2026-08-20',2:'2026-08-21',3:'2026-08-24',4:'2026-08-25',5:'2026-08-26',6:'2026-08-27',7:'2026-08-28',8:'2026-08-31',9:'2026-09-01'},9:{0:'2026-09-18',1:'2026-09-21',2:'2026-09-22',3:'2026-09-23',4:'2026-09-24',5:'2026-09-25',6:'2026-09-28',7:'2026-09-29',8:'2026-09-30',9:'2026-10-01'},10:{0:'2026-10-20',1:'2026-10-21',2:'2026-10-22',3:'2026-10-23',4:'2026-10-26',5:'2026-10-27',6:'2026-10-28',7:'2026-10-29',8:'2026-10-30',9:'2026-11-02'},11:{0:'2026-11-18',1:'2026-11-19',2:'2026-11-20',3:'2026-11-23',4:'2026-11-24',5:'2026-11-25',6:'2026-11-26',7:'2026-11-27',8:'2026-11-30',9:'2026-12-01'},12:{0:'2026-12-18',1:'2026-12-21',2:'2026-12-22',3:'2026-12-23',4:'2026-12-24',5:'2026-12-26',6:'2026-12-28',7:'2026-12-29',8:'2026-12-30',9:'2026-12-31'}},
+  IIBB:{1:{0:'2026-01-15',1:'2026-01-16',2:'2026-01-19',3:'2026-01-20',4:'2026-01-21',5:'2026-01-22',6:'2026-01-23',7:'2026-01-26',8:'2026-01-27',9:'2026-01-28'},2:{0:'2026-02-13',1:'2026-02-16',2:'2026-02-17',3:'2026-02-18',4:'2026-02-19',5:'2026-02-20',6:'2026-02-23',7:'2026-02-24',8:'2026-02-25',9:'2026-02-26'},3:{0:'2026-03-13',1:'2026-03-16',2:'2026-03-17',3:'2026-03-18',4:'2026-03-19',5:'2026-03-20',6:'2026-03-23',7:'2026-03-24',8:'2026-03-25',9:'2026-03-26'},4:{0:'2026-04-15',1:'2026-04-16',2:'2026-04-17',3:'2026-04-20',4:'2026-04-21',5:'2026-04-22',6:'2026-04-23',7:'2026-04-24',8:'2026-04-27',9:'2026-04-28'},5:{0:'2026-05-14',1:'2026-05-15',2:'2026-05-18',3:'2026-05-19',4:'2026-05-20',5:'2026-05-21',6:'2026-05-22',7:'2026-05-25',8:'2026-05-26',9:'2026-05-27'},6:{0:'2026-06-15',1:'2026-06-16',2:'2026-06-17',3:'2026-06-18',4:'2026-06-19',5:'2026-06-22',6:'2026-06-23',7:'2026-06-24',8:'2026-06-25',9:'2026-06-26'},7:{0:'2026-07-15',1:'2026-07-16',2:'2026-07-17',3:'2026-07-20',4:'2026-07-21',5:'2026-07-22',6:'2026-07-23',7:'2026-07-24',8:'2026-07-27',9:'2026-07-28'},8:{0:'2026-08-14',1:'2026-08-17',2:'2026-08-18',3:'2026-08-19',4:'2026-08-20',5:'2026-08-21',6:'2026-08-24',7:'2026-08-25',8:'2026-08-26',9:'2026-08-27'},9:{0:'2026-09-15',1:'2026-09-16',2:'2026-09-17',3:'2026-09-18',4:'2026-09-21',5:'2026-09-22',6:'2026-09-23',7:'2026-09-24',8:'2026-09-25',9:'2026-09-28'},10:{0:'2026-10-15',1:'2026-10-16',2:'2026-10-19',3:'2026-10-20',4:'2026-10-21',5:'2026-10-22',6:'2026-10-23',7:'2026-10-26',8:'2026-10-27',9:'2026-10-28'},11:{0:'2026-11-13',1:'2026-11-16',2:'2026-11-17',3:'2026-11-18',4:'2026-11-19',5:'2026-11-20',6:'2026-11-23',7:'2026-11-24',8:'2026-11-25',9:'2026-11-26'},12:{0:'2026-12-14',1:'2026-12-15',2:'2026-12-16',3:'2026-12-17',4:'2026-12-18',5:'2026-12-21',6:'2026-12-22',7:'2026-12-23',8:'2026-12-24',9:'2026-12-28'}},
+  GANANCIAS:{6:{0:'2026-06-10',1:'2026-06-11',2:'2026-06-12',3:'2026-06-15',4:'2026-06-16',5:'2026-06-17',6:'2026-06-18',7:'2026-06-19',8:'2026-06-22',9:'2026-06-23'}},
+  BIENES:{6:{0:'2026-06-10',1:'2026-06-11',2:'2026-06-12',3:'2026-06-15',4:'2026-06-16',5:'2026-06-17',6:'2026-06-18',7:'2026-06-19',8:'2026-06-22',9:'2026-06-23'}},
+  MONO:{1:{0:'2026-01-20',1:'2026-01-21',2:'2026-01-22',3:'2026-01-23',4:'2026-01-26',5:'2026-01-27',6:'2026-01-28',7:'2026-01-29',8:'2026-01-30',9:'2026-02-02'},2:{0:'2026-02-18',1:'2026-02-19',2:'2026-02-20',3:'2026-02-23',4:'2026-02-24',5:'2026-02-25',6:'2026-02-26',7:'2026-02-27',8:'2026-03-02',9:'2026-03-03'},3:{0:'2026-03-18',1:'2026-03-19',2:'2026-03-20',3:'2026-03-23',4:'2026-03-24',5:'2026-03-25',6:'2026-03-26',7:'2026-03-27',8:'2026-03-30',9:'2026-03-31'},4:{0:'2026-04-20',1:'2026-04-21',2:'2026-04-22',3:'2026-04-23',4:'2026-04-24',5:'2026-04-27',6:'2026-04-28',7:'2026-04-29',8:'2026-04-30',9:'2026-05-04'},5:{0:'2026-05-19',1:'2026-05-20',2:'2026-05-21',3:'2026-05-22',4:'2026-05-25',5:'2026-05-26',6:'2026-05-27',7:'2026-05-28',8:'2026-05-29',9:'2026-06-01'},6:{0:'2026-06-18',1:'2026-06-19',2:'2026-06-22',3:'2026-06-23',4:'2026-06-24',5:'2026-06-25',6:'2026-06-26',7:'2026-06-29',8:'2026-06-30',9:'2026-07-01'},7:{0:'2026-07-20',1:'2026-07-21',2:'2026-07-22',3:'2026-07-23',4:'2026-07-24',5:'2026-07-27',6:'2026-07-28',7:'2026-07-29',8:'2026-07-30',9:'2026-07-31'},8:{0:'2026-08-19',1:'2026-08-20',2:'2026-08-21',3:'2026-08-24',4:'2026-08-25',5:'2026-08-26',6:'2026-08-27',7:'2026-08-28',8:'2026-08-31',9:'2026-09-01'},9:{0:'2026-09-18',1:'2026-09-21',2:'2026-09-22',3:'2026-09-23',4:'2026-09-24',5:'2026-09-25',6:'2026-09-28',7:'2026-09-29',8:'2026-09-30',9:'2026-10-01'},10:{0:'2026-10-20',1:'2026-10-21',2:'2026-10-22',3:'2026-10-23',4:'2026-10-26',5:'2026-10-27',6:'2026-10-28',7:'2026-10-29',8:'2026-10-30',9:'2026-11-02'},11:{0:'2026-11-18',1:'2026-11-19',2:'2026-11-20',3:'2026-11-23',4:'2026-11-24',5:'2026-11-25',6:'2026-11-26',7:'2026-11-27',8:'2026-11-30',9:'2026-12-01'},12:{0:'2026-12-18',1:'2026-12-21',2:'2026-12-22',3:'2026-12-23',4:'2026-12-24',5:'2026-12-26',6:'2026-12-28',7:'2026-12-29',8:'2026-12-30',9:'2026-12-31'}}
+};
+const MESES=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function termCuit(cuit){const c=(cuit||'').replace(/\D/g,'');return c.length>=11?parseInt(c[c.length-2]):null;}
+function getAfip(key,mes,term){const t=AFIP[key];return(t&&t[mes]&&term!==null)?t[mes][term]||null:null;}
+function generarSugs(cliente,mes){
+  const t=termCuit(cliente.cuit),cat=cliente.categoria,s=[];
+  if(t===null)return s;
+  if(cat==='Responsable Inscripto'){
+    const f1=getAfip('IVA_RI',mes,t);if(f1)s.push({tipo:'IVA mensual',fecha:f1});
+    const f2=getAfip('IIBB',mes,t);if(f2)s.push({tipo:'Ingresos Brutos',fecha:f2});
+    if(mes===6){const f3=getAfip('GANANCIAS',mes,t);if(f3)s.push({tipo:'Ganancias',fecha:f3});const f4=getAfip('BIENES',mes,t);if(f4)s.push({tipo:'Bienes Personales',fecha:f4});}
+  }else if(cat==='Monotributo'){
+    const f1=getAfip('MONO',mes,t);if(f1)s.push({tipo:'Monotributo',fecha:f1});
+    const f2=getAfip('IIBB',mes,t);if(f2)s.push({tipo:'Ingresos Brutos',fecha:f2});
+  }
+  return s;
+}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let db={clientes:[],vencimientos:[],cobros:[]};
+let currentUser=null,editId=null,vencFiltro='todos',cobrosFiltro='todos';
+let sugsImportar=[],sugsClienteId='';
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+let setupMode='login';
+function setSetupTab(mode,el){
+  setupMode=mode;
+  document.querySelectorAll('.setup-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('auth-name-row').style.display=mode==='register'?'block':'none';
+  document.getElementById('auth-btn').textContent=mode==='register'?'Crear cuenta':'Ingresar';
+  document.getElementById('auth-error').style.display='none';
+}
+async function authAction(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-pass').value;
+  const errEl=document.getElementById('auth-error');
+  errEl.style.display='none';
+  if(!email||!pass){errEl.textContent='Completá email y contraseña';errEl.style.display='block';return;}
+  const btn=document.getElementById('auth-btn');
+  btn.disabled=true;btn.textContent='Procesando...';
+  try{
+    let res;
+    if(setupMode==='register'){
+      res=await sb.auth.signUp({email,password:pass,options:{data:{name:document.getElementById('auth-name').value.trim()||email.split('@')[0]}}});
+    }else{
+      res=await sb.auth.signInWithPassword({email,password:pass});
+    }
+    if(res.error)throw res.error;
+    if(setupMode==='register'&&!res.data.session){
+      errEl.textContent='¡Cuenta creada! Revisá tu email para confirmar.';
+      errEl.style.color='var(--ok)';errEl.style.display='block';
+    }
+  }catch(e){
+    errEl.textContent=e.message||'Error de autenticación';errEl.style.display='block';
+  }
+  btn.disabled=false;btn.textContent=setupMode==='register'?'Crear cuenta':'Ingresar';
+}
+async function logout(){
+  await sb.auth.signOut();
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('setup-screen').classList.add('show');
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+async function init(){
+  setLoadingMsg('Verificando sesión...');
+  const{data:{session}}=await sb.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    await setupTables();
+    await loadAll();
+    showApp();
+  }else{
+    hideLoading();
+    document.getElementById('setup-screen').classList.add('show');
+  }
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session){
+      currentUser=session.user;
+      document.getElementById('setup-screen').classList.remove('show');
+      showLoading('Cargando datos...');
+      await setupTables();
+      await loadAll();
+      showApp();
+    }
+    if(event==='SIGNED_OUT'){currentUser=null;}
+  });
+}
+
+function showLoading(msg){document.getElementById('loading-screen').style.display='flex';document.getElementById('loading-msg').textContent=msg||'Cargando...';}
+function hideLoading(){document.getElementById('loading-screen').style.display='none';}
+function setLoadingMsg(m){document.getElementById('loading-msg').textContent=m;}
+
+async function setupTables(){
+  setLoadingMsg('Preparando base de datos...');
+  try{await sb.from('clientes').select('id').limit(1);}catch(e){console.log('Tablas no encontradas');}
+}
+
+async function loadAll(){
+  setLoadingMsg('Cargando datos...');
+  const[{data:clientes},{data:vencimientos},{data:cobros}]=await Promise.all([
+    sb.from('clientes').select('*').order('nombre'),
+    sb.from('vencimientos').select('*').order('fecha'),
+    sb.from('cobros').select('*').order('created_at',{ascending:false})
+  ]);
+  db.clientes=clientes||[];
+  db.vencimientos=vencimientos||[];
+  db.cobros=cobros||[];
+}
+
+function showApp(){
+  hideLoading();
+  document.getElementById('main-app').style.display='flex';
+  const name=currentUser?.user_metadata?.name||currentUser?.email?.split('@')[0]||'Usuario';
+  document.getElementById('user-name').textContent=name;
+  document.getElementById('user-avatar').textContent=name.slice(0,2).toUpperCase();
+  document.getElementById('sf-date').textContent=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+  renderAll();
+  renderTopbarActions('inicio');
+}
+
+init();
+
+// ═══════════════════════════════════════════
+// VOLVER A LA PESTAÑA — recarga automática
+// ═══════════════════════════════════════════
+let lastHidden = null;
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'hidden') {
+    lastHidden = Date.now();
+    return;
+  }
+
+  // Volvió a la pestaña
+  if (document.visibilityState === 'visible') {
+    const ausencia = lastHidden ? Date.now() - lastHidden : 0;
+
+    // Si estuvo fuera menos de 30 segundos, no hacer nada
+    if (ausencia < 30000) return;
+
+    const appVisible = document.getElementById('main-app')?.style.display === 'flex';
+
+    // Si la app está abierta y hay sesión, refrescar datos silenciosamente
+    if (appVisible && currentUser) {
+      try {
+        setSyncing(true);
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          currentUser = session.user;
+          await loadAll();
+          renderAll();
+          // Re-renderizar la sección activa
+          const activeSection = document.querySelector('.section.active')?.id?.replace('s-', '');
+          if (activeSection) {
+            const fn = { clientes:renderClientes, vencimientos:renderVencimientos, cobros:renderCobros, reportes:renderReportes };
+            if (fn[activeSection]) fn[activeSection]();
+          }
+        } else {
+          // La sesión expiró — volver al login
+          currentUser = null;
+          document.getElementById('main-app').style.display = 'none';
+          document.getElementById('setup-screen').classList.add('show');
+          toast('Tu sesión expiró. Ingresá nuevamente.');
+        }
+        setSyncing(false);
+      } catch(e) {
+        setSyncing(false);
+        console.log('Error al refrescar sesión:', e);
+      }
+      return;
+    }
+
+    // Si no hay nada visible, reiniciar la app
+    const loginVisible = document.getElementById('setup-screen')?.classList.contains('show');
+    const loadingVisible = document.getElementById('loading-screen')?.style.display !== 'none';
+    if (!appVisible && !loginVisible && !loadingVisible) {
+      init();
+    }
+  }
+});
+
+// ═══════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════
+const PT={inicio:'Inicio',clientes:'Clientes',vencimientos:'Vencimientos',cobros:'Cobros',reportes:'Reportes',afip:'AFIP / Accesos'};
+const PS={inicio:'Resumen del día',clientes:'Cartera de clientes',vencimientos:'Calendario de tareas',cobros:'Honorarios y pagos',reportes:'Análisis',afip:'Calendario oficial + accesos directos'};
+function nav(page,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('s-'+page).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent=PT[page];
+  document.getElementById('page-sub').textContent=PS[page];
+  renderTopbarActions(page);
+  const fn={inicio:renderDashboard,clientes:renderClientes,vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,afip:renderAfip};
+  if(fn[page])fn[page]();
+}
+function renderTopbarActions(page){
+  const el=document.getElementById('topbar-actions');
+  const map={
+    clientes:`<button class="btn btn-primary" onclick="openModalCliente()">+ Nuevo cliente</button>`,
+    vencimientos:`<button class="btn btn-afip btn-sm" onclick="nav('afip',document.querySelectorAll('.nav-item')[5])">↗ AFIP</button><button class="btn btn-primary" onclick="openModalVenc()">+ Nueva tarea</button>`,
+    cobros:`<button class="btn btn-primary" onclick="openModalCobro()">+ Registrar cobro</button>`,
+    inicio:'',reportes:'',afip:''
+  };
+  el.innerHTML=map[page]||'';
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function fmt$(n){return '$'+Number(n||0).toLocaleString('es-AR');}
+function fmtDate(d){if(!d)return'—';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`;}
+function today(){return new Date().toISOString().split('T')[0];}
+function daysTo(d){return Math.ceil((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000);}
+function getCliente(id){return db.clientes.find(c=>c.id===id)||{};}
+function initials(n){return(n||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function vencBadge(v){
+  if(v.estado==='completado')return`<span class="badge badge-ok">Completado</span>`;
+  const d=daysTo(v.fecha);
+  if(d<0)return`<span class="badge badge-danger">Vencido (${Math.abs(d)}d)</span>`;
+  if(d===0)return`<span class="badge badge-danger">Vence hoy</span>`;
+  if(d<=3)return`<span class="badge badge-danger">En ${d}d</span>`;
+  if(d<=7)return`<span class="badge badge-warn">En ${d}d</span>`;
+  return`<span class="badge badge-ok">En ${d}d</span>`;
+}
+function cobroBadge(e){const m={pendiente:'badge-warn',cobrado:'badge-ok',vencido:'badge-danger'};const l={pendiente:'Pendiente',cobrado:'Cobrado',vencido:'Vencido'};return`<span class="badge ${m[e]||'badge-neutral'}">${l[e]||e}</span>`;}
+function catBadge(c){if(c==='Responsable Inscripto')return`<span class="badge badge-blue">RI</span>`;if(c==='Monotributo')return`<span class="badge badge-accent">Mono</span>`;return`<span class="badge badge-neutral">${c||'—'}</span>`;}
+function estadoBadge(e){return e==='Activo'?`<span class="badge badge-ok">Activo</span>`:`<span class="badge badge-neutral">Inactivo</span>`;}
+function toast(msg,ms=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms);}
+function setSyncing(on){const s=document.getElementById('sync-status');s.innerHTML=on?'<div class="spinner" style="width:10px;height:10px;border-width:2px;margin-right:6px"></div>Guardando...':'<span class="sync-dot"></span>Sincronizado';s.className='sidebar-status'+(on?' offline':'');}
+function confirm_(title,msg,fn){
+  document.getElementById('confirm-title').textContent=title;
+  document.getElementById('confirm-msg').textContent=msg;
+  document.getElementById('confirm-ok').onclick=()=>{fn();closeModal('modal-confirm');};
+  openModal('modal-confirm');
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');editId=null;}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+function populateSelects(){
+  const activos=db.clientes.filter(c=>c.estado==='Activo');
+  const opts=activos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  ['mv-cliente','mcob-cliente','afip-import-cliente'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.innerHTML=(id==='afip-import-cliente'?'<option value="">— Seleccioná un cliente —</option>':'')+opts;
+  });
+  const all='<option value="">Todos los clientes</option>'+db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  ['filter-venc-cliente','filter-cobros-cliente'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=all;});
+}
+
+// ═══════════════════════════════════════════
+// CLIENTES
+// ═══════════════════════════════════════════
+function openModalCliente(id){
+  editId=id||null;
+  const c=id?db.clientes.find(x=>x.id===id):null;
+  document.getElementById('mc-title').textContent=c?'Editar cliente':'Nuevo cliente';
+  ['nombre','cuit','email','tel','honorario','notas'].forEach(f=>document.getElementById('mc-'+f).value=c?.[f]||'');
+  document.getElementById('mc-cat').value=c?.categoria||'Responsable Inscripto';
+  document.getElementById('mc-estado').value=c?.estado||'Activo';
+  openModal('modal-cliente');
+}
+async function guardarCliente(){
+  const nombre=document.getElementById('mc-nombre').value.trim();
+  if(!nombre){toast('El nombre es obligatorio');return;}
+  const btn=document.getElementById('btn-guardar-cliente');btn.disabled=true;
+  setSyncing(true);
+  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),created_by:currentUser.id};
+  let res;
+  if(editId){res=await sb.from('clientes').update(data).eq('id',editId).select().single();}
+  else{res=await sb.from('clientes').insert(data).select().single();}
+  setSyncing(false);btn.disabled=false;
+  if(res.error){toast('Error: '+res.error.message);return;}
+  if(editId){const i=db.clientes.findIndex(c=>c.id===editId);db.clientes[i]=res.data;}
+  else{db.clientes.push(res.data);}
+  toast(editId?'Cliente actualizado ✓':'Cliente agregado ✓');
+  closeModal('modal-cliente');renderClientes();renderAll();
+}
+function renderClientes(){
+  populateSelects();
+  const q=document.getElementById('search-clientes')?.value.toLowerCase()||'';
+  const cat=document.getElementById('filter-categoria')?.value||'';
+  let list=db.clientes.filter(c=>(c.nombre+c.cuit+c.email).toLowerCase().includes(q)&&(!cat||c.categoria===cat));
+  const tb=document.getElementById('tabla-clientes'),em=document.getElementById('empty-clientes');
+  if(!list.length){tb.innerHTML='';em.style.display='block';return;}
+  em.style.display='none';
+  tb.innerHTML=list.map(c=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(c.nombre)}</div><div><div style="font-weight:500">${c.nombre}</div>${c.notas?`<div style="font-size:11px;color:var(--text3)">${c.notas.slice(0,40)}${c.notas.length>40?'…':''}</div>`:''}</div></div></td>
+    <td style="color:var(--text2);font-family:monospace;font-size:12px">${c.cuit||'—'}</td>
+    <td>${catBadge(c.categoria)}</td>
+    <td style="color:var(--text2)">${c.email||'—'}</td>
+    <td style="color:var(--text2)">${c.tel||'—'}</td>
+    <td style="font-weight:500">${c.honorario?fmt$(c.honorario):'—'}</td>
+    <td>${estadoBadge(c.estado)}</td>
+    <td><div style="display:flex;gap:4px">
+      <button class="action-btn" onclick="verFicha('${c.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="action-btn" onclick="openModalCliente('${c.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button class="action-btn del" onclick="eliminarCliente('${c.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+    </div></td>
+  </tr>`).join('');
+}
+async function eliminarCliente(id){
+  const c=db.clientes.find(x=>x.id===id);
+  confirm_('Eliminar cliente',`¿Eliminar a "${c.nombre}"? Se eliminarán sus tareas y cobros.`,async()=>{
+    setSyncing(true);
+    await sb.from('clientes').delete().eq('id',id);
+    setSyncing(false);
+    db.clientes=db.clientes.filter(x=>x.id!==id);
+    db.vencimientos=db.vencimientos.filter(v=>v.cliente_id!==id);
+    db.cobros=db.cobros.filter(c=>c.cliente_id!==id);
+    renderClientes();renderAll();toast('Cliente eliminado');
+  });
+}
+function verFicha(id){
+  const c=db.clientes.find(x=>x.id===id);
+  const venc=db.vencimientos.filter(v=>v.cliente_id===id);
+  const cobros=db.cobros.filter(cb=>cb.cliente_id===id);
+  const pendCob=cobros.filter(cb=>cb.estado!=='cobrado').reduce((s,cb)=>s+Number(cb.importe||0),0);
+  const term=termCuit(c.cuit||'');
+  document.getElementById('ficha-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem">
+      <div class="avatar" style="width:48px;height:48px;font-size:16px">${initials(c.nombre)}</div>
+      <div><div style="font-family:var(--serif);font-size:20px">${c.nombre}</div><div style="font-size:12px;color:var(--text3)">${c.categoria}</div></div>
+      ${estadoBadge(c.estado)}
+    </div>
+    <div class="ficha">
+      <div><div class="ficha-key">CUIT</div><div class="ficha-val">${c.cuit||'—'}</div></div>
+      <div><div class="ficha-key">Terminación CUIT</div><div class="ficha-val">${term!==null?`${term} <span class="badge badge-afip" style="font-size:10px">AFIP</span>`:'—'}</div></div>
+      <div><div class="ficha-key">Honorario</div><div class="ficha-val">${c.honorario?fmt$(c.honorario):'—'}</div></div>
+      <div><div class="ficha-key">Email</div><div class="ficha-val">${c.email||'—'}</div></div>
+      <div><div class="ficha-key">Tareas activas</div><div class="ficha-val">${venc.filter(v=>v.estado!=='completado').length}</div></div>
+      <div><div class="ficha-key">Cobros pendientes</div><div class="ficha-val" style="color:${pendCob>0?'var(--warn)':'var(--ok)'}">${fmt$(pendCob)}</div></div>
+    </div>
+    ${c.notas?`<div style="margin-top:1rem;padding:10px;background:var(--bg);border-radius:var(--radius);font-size:13px;color:var(--text2)">${c.notas}</div>`:''}
+    <div style="margin-top:1.25rem"><button class="btn btn-afip btn-sm" onclick="closeModal('modal-ficha');abrirImportAfipDirecto('${c.id}')">Sugerir vencimientos AFIP</button></div>
+  `;
+  openModal('modal-ficha');
+}
+
+// ═══════════════════════════════════════════
+// VENCIMIENTOS
+// ═══════════════════════════════════════════
+function openModalVenc(id){
+  editId=id||null;
+  const v=id?db.vencimientos.find(x=>x.id===id):null;
+  populateSelects();
+  document.getElementById('mv-title').textContent=v?'Editar tarea':'Nueva tarea';
+  if(v)document.getElementById('mv-cliente').value=v.cliente_id;
+  document.getElementById('mv-tipo').value=v?.tipo||'IVA mensual';
+  document.getElementById('mv-fecha').value=v?.fecha||today();
+  document.getElementById('mv-resp').value=v?.responsable||'';
+  document.getElementById('mv-estado').value=v?.estado||'pendiente';
+  document.getElementById('mv-notas').value=v?.notas||'';
+  openModal('modal-venc');
+}
+async function guardarVencimiento(){
+  const clienteId=document.getElementById('mv-cliente').value;
+  const fecha=document.getElementById('mv-fecha').value;
+  if(!clienteId){toast('Seleccioná un cliente');return;}
+  if(!fecha){toast('La fecha es obligatoria');return;}
+  const btn=document.getElementById('btn-guardar-venc');btn.disabled=true;
+  setSyncing(true);
+  const data={cliente_id:clienteId,tipo:document.getElementById('mv-tipo').value,fecha,responsable:document.getElementById('mv-resp').value.trim(),estado:document.getElementById('mv-estado').value,notas:document.getElementById('mv-notas').value.trim(),origen:'manual',created_by:currentUser.id};
+  let res;
+  if(editId){res=await sb.from('vencimientos').update(data).eq('id',editId).select().single();}
+  else{res=await sb.from('vencimientos').insert(data).select().single();}
+  setSyncing(false);btn.disabled=false;
+  if(res.error){toast('Error: '+res.error.message);return;}
+  if(editId){const i=db.vencimientos.findIndex(v=>v.id===editId);db.vencimientos[i]=res.data;}
+  else{db.vencimientos.push(res.data);}
+  toast(editId?'Tarea actualizada ✓':'Tarea agregada ✓');
+  closeModal('modal-venc');renderVencimientos();renderAll();
+}
+function filterVenc(f,el){vencFiltro=f;document.querySelectorAll('#s-vencimientos .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderVencimientos();}
+function renderVencimientos(){
+  populateSelects();
+  const fC=document.getElementById('filter-venc-cliente')?.value||'';
+  const fT=document.getElementById('filter-venc-tipo')?.value||'';
+  let list=db.vencimientos.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  if(vencFiltro==='pendiente')list=list.filter(v=>v.estado!=='completado');
+  if(vencFiltro==='completado')list=list.filter(v=>v.estado==='completado');
+  if(fC)list=list.filter(v=>v.cliente_id===fC);
+  if(fT)list=list.filter(v=>v.tipo===fT);
+  const urg=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=3).length;
+  document.getElementById('alert-venc').innerHTML=urg>0?`<div class="alert alert-danger">⚠ ${urg} tarea${urg>1?'s':''} con vencimiento en menos de 3 días.</div>`:'';
+  const pend=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=7).length;
+  const badge=document.getElementById('badge-venc');badge.textContent=pend;badge.style.display=pend>0?'':'none';
+  const tb=document.getElementById('tabla-vencimientos'),em=document.getElementById('empty-venc');
+  if(!list.length){tb.innerHTML='';em.style.display='block';return;}
+  em.style.display='none';
+  tb.innerHTML=list.map(v=>{
+    const c=getCliente(v.cliente_id);
+    return`<tr>
+      <td style="font-weight:500;white-space:nowrap">${fmtDate(v.fecha)}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(c.nombre)}</div>${c.nombre||'—'}</div></td>
+      <td>${v.tipo}</td>
+      <td style="color:var(--text2)">${v.responsable||'—'}</td>
+      <td>${v.origen==='afip'?'<span class="badge badge-afip">AFIP</span>':'<span class="badge badge-neutral">Manual</span>'}</td>
+      <td>${vencBadge(v)}</td>
+      <td style="color:var(--text3);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.notas||'—'}</td>
+      <td><div style="display:flex;gap:4px">
+        ${v.estado!=='completado'?`<button class="action-btn" onclick="marcarCompletado('${v.id}')" style="color:var(--ok)"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></button>`:''}
+        <button class="action-btn" onclick="openModalVenc('${v.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="action-btn del" onclick="eliminarVenc('${v.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+async function marcarCompletado(id){
+  setSyncing(true);
+  const res=await sb.from('vencimientos').update({estado:'completado'}).eq('id',id).select().single();
+  setSyncing(false);
+  if(res.error){toast('Error al actualizar');return;}
+  const i=db.vencimientos.findIndex(v=>v.id===id);db.vencimientos[i]=res.data;
+  renderVencimientos();renderAll();toast('Tarea completada ✓');
+}
+async function eliminarVenc(id){
+  confirm_('Eliminar tarea','¿Eliminar esta tarea?',async()=>{
+    setSyncing(true);await sb.from('vencimientos').delete().eq('id',id);setSyncing(false);
+    db.vencimientos=db.vencimientos.filter(v=>v.id!==id);renderVencimientos();renderAll();toast('Tarea eliminada');
+  });
+}
+
+// ═══════════════════════════════════════════
+// COBROS
+// ═══════════════════════════════════════════
+function openModalCobro(id){
+  editId=id||null;
+  const cb=id?db.cobros.find(x=>x.id===id):null;
+  populateSelects();
+  document.getElementById('mcob-title').textContent=cb?'Editar cobro':'Registrar cobro';
+  if(cb)document.getElementById('mcob-cliente').value=cb.cliente_id;
+  document.getElementById('mcob-concepto').value=cb?.concepto||'';
+  document.getElementById('mcob-importe').value=cb?.importe||'';
+  document.getElementById('mcob-venc').value=cb?.vencimiento||'';
+  document.getElementById('mcob-fecha').value=cb?.fecha_cobro||'';
+  document.getElementById('mcob-medio').value=cb?.medio||'Transferencia';
+  document.getElementById('mcob-estado').value=cb?.estado||'pendiente';
+  openModal('modal-cobro');
+}
+async function guardarCobro(){
+  const clienteId=document.getElementById('mcob-cliente').value;
+  const concepto=document.getElementById('mcob-concepto').value.trim();
+  const importe=document.getElementById('mcob-importe').value;
+  if(!clienteId||!concepto||!importe){toast('Cliente, concepto e importe son obligatorios');return;}
+  const btn=document.getElementById('btn-guardar-cobro');btn.disabled=true;
+  setSyncing(true);
+  const data={cliente_id:clienteId,concepto,importe:Number(importe),vencimiento:document.getElementById('mcob-venc').value||null,fecha_cobro:document.getElementById('mcob-fecha').value||null,medio:document.getElementById('mcob-medio').value,estado:document.getElementById('mcob-estado').value,created_by:currentUser.id};
+  let res;
+  if(editId){res=await sb.from('cobros').update(data).eq('id',editId).select().single();}
+  else{res=await sb.from('cobros').insert(data).select().single();}
+  setSyncing(false);btn.disabled=false;
+  if(res.error){toast('Error: '+res.error.message);return;}
+  if(editId){const i=db.cobros.findIndex(c=>c.id===editId);db.cobros[i]=res.data;}
+  else{db.cobros.push(res.data);}
+  toast(editId?'Cobro actualizado ✓':'Cobro registrado ✓');
+  closeModal('modal-cobro');renderCobros();renderAll();
+}
+function filterCobros(f,el){cobrosFiltro=f;document.querySelectorAll('#s-cobros .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderCobros();}
+function renderCobros(){
+  populateSelects();
+  const fC=document.getElementById('filter-cobros-cliente')?.value||'';
+  let list=db.cobros.slice().sort((a,b)=>(b.vencimiento||'').localeCompare(a.vencimiento||''));
+  if(cobrosFiltro!=='todos')list=list.filter(c=>c.estado===cobrosFiltro);
+  if(fC)list=list.filter(c=>c.cliente_id===fC);
+  const cob=db.cobros.filter(c=>c.estado==='cobrado').reduce((s,c)=>s+Number(c.importe||0),0);
+  const pen=db.cobros.filter(c=>c.estado==='pendiente').reduce((s,c)=>s+Number(c.importe||0),0);
+  const venc=db.cobros.filter(c=>c.estado==='vencido').reduce((s,c)=>s+Number(c.importe||0),0);
+  document.getElementById('cobros-stats').innerHTML=`
+    <div class="stat-card stat-ok"><div class="stat-label">Cobrado</div><div class="stat-value">${fmt$(cob)}</div></div>
+    <div class="stat-card stat-warn"><div class="stat-label">Pendiente</div><div class="stat-value">${fmt$(pen)}</div></div>
+    <div class="stat-card stat-danger"><div class="stat-label">Vencido</div><div class="stat-value">${fmt$(venc)}</div></div>
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${fmt$(cob+pen+venc)}</div></div>
+  `;
+  const tb=document.getElementById('tabla-cobros'),em=document.getElementById('empty-cobros');
+  if(!list.length){tb.innerHTML='';em.style.display='block';return;}
+  em.style.display='none';
+  tb.innerHTML=list.map(cb=>{
+    const c=getCliente(cb.cliente_id);
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(c.nombre)}</div>${c.nombre||'—'}</div></td>
+      <td>${cb.concepto}</td>
+      <td style="font-weight:500">${fmt$(cb.importe)}</td>
+      <td style="color:var(--text2)">${fmtDate(cb.vencimiento)}</td>
+      <td style="color:var(--text2)">${fmtDate(cb.fecha_cobro)}</td>
+      <td style="color:var(--text3)">${cb.medio||'—'}</td>
+      <td>${cobroBadge(cb.estado)}</td>
+      <td><div style="display:flex;gap:4px">
+        ${cb.estado!=='cobrado'?`<button class="action-btn" onclick="marcarCobrado('${cb.id}')" style="color:var(--ok)"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></button>`:''}
+        <button class="action-btn" onclick="openModalCobro('${cb.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="action-btn del" onclick="eliminarCobro('${cb.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+async function marcarCobrado(id){
+  setSyncing(true);
+  const res=await sb.from('cobros').update({estado:'cobrado',fecha_cobro:today()}).eq('id',id).select().single();
+  setSyncing(false);
+  if(res.error){toast('Error al actualizar');return;}
+  const i=db.cobros.findIndex(c=>c.id===id);db.cobros[i]=res.data;
+  renderCobros();renderAll();toast('Cobro marcado ✓');
+}
+async function eliminarCobro(id){
+  confirm_('Eliminar cobro','¿Eliminar este cobro?',async()=>{
+    setSyncing(true);await sb.from('cobros').delete().eq('id',id);setSyncing(false);
+    db.cobros=db.cobros.filter(c=>c.id!==id);renderCobros();renderAll();toast('Cobro eliminado');
+  });
+}
+
+// ═══════════════════════════════════════════
+// AFIP
+// ═══════════════════════════════════════════
+function renderAfip(){populateSelects();document.getElementById('afip-mes').value=new Date().getMonth()+1;renderCalendarioAfip();}
+function renderCalendarioAfip(){
+  const cat=document.getElementById('afip-cat')?.value||'RI';
+  const mes=parseInt(document.getElementById('afip-mes')?.value||new Date().getMonth()+1);
+  const terms=[0,1,2,3,4,5,6,7,8,9];
+  const tipos=cat==='RI'
+    ?[{key:'IVA_RI',label:'IVA mensual'},{key:'IIBB',label:'Ingresos Brutos'},...(mes===6?[{key:'GANANCIAS',label:'Ganancias'},{key:'BIENES',label:'Bienes Personales'}]:[])]
+    :[{key:'MONO',label:'Monotributo'},{key:'IIBB',label:'Ingresos Brutos'}];
+  let rows='';
+  tipos.forEach(({key,label})=>{
+    const fechas=AFIP[key]?.[mes];if(!fechas)return;
+    const cells=terms.map(t=>{const f=fechas[t];const d=f?daysTo(f):null;let col='';if(d!==null){if(d<0)col='color:var(--danger)';else if(d<=7)col='color:var(--warn)';else col='color:var(--ok)';}return`<td style="text-align:center;font-size:12px;font-weight:500;${col}">${f?fmtDate(f):'—'}</td>`;}).join('');
+    rows+=`<tr><td style="font-weight:500;font-size:13px;white-space:nowrap">${label}</td>${cells}</tr>`;
+  });
+  document.getElementById('cal-afip-tabla').innerHTML=`<div style="overflow-x:auto"><table><thead><tr><th style="min-width:140px">Obligación — ${MESES[mes]} 2026</th>${terms.map(t=>`<th style="text-align:center">Term.${t}</th>`).join('')}</tr></thead><tbody>${rows||'<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:2rem">Sin vencimientos para este mes</td></tr>'}</tbody></table></div>`;
+}
+function abrirImportAfip(){const id=document.getElementById('afip-import-cliente').value;if(!id){toast('Seleccioná un cliente');return;}abrirImportAfipDirecto(id);}
+function abrirImportAfipDirecto(clienteId){
+  const c=db.clientes.find(x=>x.id===clienteId);if(!c)return;
+  const mes=parseInt(document.getElementById('afip-mes')?.value||new Date().getMonth()+1);
+  const term=termCuit(c.cuit||'');
+  if(term===null){toast('Completá el CUIT del cliente primero');return;}
+  sugsImportar=generarSugs(c,mes);sugsClienteId=clienteId;
+  document.getElementById('mia-title').textContent=`Vencimientos AFIP — ${c.nombre}`;
+  document.getElementById('mia-sub').textContent=`${MESES[mes]} 2026 · CUIT: ${c.cuit} (term. ${term}) · ${c.categoria}`;
+  if(!sugsImportar.length){document.getElementById('sugs-list').innerHTML='<div class="empty"><p>No hay vencimientos AFIP para esta categoría y mes.</p></div>';}
+  else{
+    document.getElementById('sugs-list').innerHTML=sugsImportar.map((s,i)=>{
+      const existe=db.vencimientos.some(v=>v.cliente_id===clienteId&&v.tipo===s.tipo&&v.fecha===s.fecha);
+      return`<div class="sug-item" style="${existe?'opacity:.55':''}">
+        <label><input type="checkbox" id="sug-${i}" ${existe?'disabled':''} ${!existe?'checked':''}><div><div style="font-weight:500">${s.tipo}</div><div style="font-size:11px;color:var(--text3)">Vence: ${fmtDate(s.fecha)}</div></div></label>
+        ${existe?'<span class="badge badge-ok" style="font-size:10px">Ya agregado</span>':''}
+      </div>`;
+    }).join('');
+  }
+  openModal('modal-import-afip');
+}
+async function importarSugeridas(){
+  const nuevos=[];
+  sugsImportar.forEach((s,i)=>{
+    const cb=document.getElementById('sug-'+i);
+    if(cb&&!cb.disabled&&cb.checked)nuevos.push({cliente_id:sugsClienteId,tipo:s.tipo,fecha:s.fecha,estado:'pendiente',responsable:'',notas:'Importado desde calendario AFIP 2026',origen:'afip',created_by:currentUser.id});
+  });
+  if(!nuevos.length){toast('No seleccionaste ningún vencimiento');return;}
+  setSyncing(true);
+  const res=await sb.from('vencimientos').insert(nuevos).select();
+  setSyncing(false);
+  if(res.error){toast('Error: '+res.error.message);return;}
+  db.vencimientos.push(...res.data);
+  toast(`${res.data.length} vencimiento${res.data.length>1?'s':''} importado${res.data.length>1?'s':''} ✓`);
+  closeModal('modal-import-afip');renderAll();
+}
+function consultarCuit(){const cuit=document.getElementById('cuit-consulta').value.replace(/\D/g,'');if(cuit.length<10){toast('Ingresá un CUIT válido');return;}window.open(`https://sdi.afip.gob.ar/consulta-cuit/resultados?cuit=${cuit}`,'_blank');}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard(){
+  const pendVenc=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=7).length;
+  const pendCob=db.cobros.filter(c=>c.estado==='pendiente').reduce((s,c)=>s+Number(c.importe||0),0);
+  const cobrado=db.cobros.filter(c=>c.estado==='cobrado').reduce((s,c)=>s+Number(c.importe||0),0);
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Clientes activos</div><div class="stat-value">${db.clientes.filter(c=>c.estado==='Activo').length}</div><div class="stat-sub">Total: ${db.clientes.length}</div></div>
+    <div class="stat-card ${pendVenc>0?'stat-danger':''}"><div class="stat-label">Vencimientos próximos</div><div class="stat-value">${pendVenc}</div><div class="stat-sub">Próximos 7 días</div></div>
+    <div class="stat-card ${pendCob>0?'stat-warn':''}"><div class="stat-label">Cobros pendientes</div><div class="stat-value">${fmt$(pendCob)}</div></div>
+    <div class="stat-card stat-ok"><div class="stat-label">Total cobrado</div><div class="stat-value">${fmt$(cobrado)}</div></div>
+  `;
+  const upcoming=db.vencimientos.filter(v=>v.estado!=='completado').sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(0,6);
+  const dv=document.getElementById('dash-venc');
+  if(!upcoming.length){dv.innerHTML='<div class="empty"><p>Sin vencimientos próximos</p></div>';}
+  else dv.innerHTML=upcoming.map(v=>{
+    const c=getCliente(v.cliente_id);const d=daysTo(v.fecha);
+    return`<div class="venc-row"><div style="display:flex;align-items:center;gap:8px"><div class="venc-dot ${d<0?'dot-danger':d<=3?'dot-danger':d<=7?'dot-warn':'dot-ok'}"></div><div><div style="font-size:13px;font-weight:500">${v.tipo} — ${c.nombre||'?'} ${v.origen==='afip'?'<span class="badge badge-afip" style="font-size:9px">AFIP</span>':''}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(v.fecha)}</div></div></div>${vencBadge(v)}</div>`;
+  }).join('');
+  const pends=db.cobros.filter(c=>c.estado!=='cobrado').sort((a,b)=>(a.vencimiento||'').localeCompare(b.vencimiento||'')).slice(0,5);
+  const dc=document.getElementById('dash-cobros');
+  if(!pends.length){dc.innerHTML='<div class="empty"><p>Sin cobros pendientes 🎉</p></div>';}
+  else dc.innerHTML=pends.map(cb=>{const c=getCliente(cb.cliente_id);return`<div class="venc-row"><div><div style="font-size:13px;font-weight:500">${c.nombre||'?'}</div><div style="font-size:11px;color:var(--text3)">${cb.concepto}</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:500">${fmt$(cb.importe)}</div>${cobroBadge(cb.estado)}</div></div>`;}).join('');
+}
+
+// ═══════════════════════════════════════════
+// REPORTES
+// ═══════════════════════════════════════════
+function renderReportes(){
+  const cats=['Responsable Inscripto','Monotributo','Exento','Otro'];
+  const cc=['#185FA5','#1D9E75','#B7791F','#6B6560'];
+  const total=db.clientes.length||1;
+  document.getElementById('rep-categorias').innerHTML=cats.map((cat,i)=>{const n=db.clientes.filter(c=>c.categoria===cat).length;const pct=Math.round(n/total*100);return`<div class="prog-row"><div class="prog-label"><span>${cat}</span><span>${n} (${pct}%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${cc[i]}"></div></div></div>`;}).join('');
+  const tipos=['IVA mensual','Ganancias','Ingresos Brutos','Balance anual','Monotributo','Otro'];
+  const tc=['#185FA5','#1D9E75','#534AB7','#B7791F','#993C1D','#6B6560'];
+  const totalV=db.vencimientos.length||1;
+  document.getElementById('rep-tareas').innerHTML=tipos.map((tipo,i)=>{const all=db.vencimientos.filter(v=>v.tipo===tipo);const done=all.filter(v=>v.estado==='completado').length;const pct=Math.round(all.length/totalV*100);return`<div class="prog-row"><div class="prog-label"><span>${tipo}</span><span>${done}/${all.length}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${tc[i]}"></div></div></div>`;}).join('');
+  const cob=db.cobros.filter(c=>c.estado==='cobrado').reduce((s,c)=>s+Number(c.importe||0),0);
+  const pen=db.cobros.filter(c=>c.estado==='pendiente').reduce((s,c)=>s+Number(c.importe||0),0);
+  const venc=db.cobros.filter(c=>c.estado==='vencido').reduce((s,c)=>s+Number(c.importe||0),0);
+  const tot=cob+pen+venc||1;
+  document.getElementById('rep-cobros-resumen').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1rem">
+      <div class="stat-card stat-ok"><div class="stat-label">Cobrado</div><div class="stat-value">${fmt$(cob)}</div><div class="stat-sub">${Math.round(cob/tot*100)}%</div></div>
+      <div class="stat-card stat-warn"><div class="stat-label">Pendiente</div><div class="stat-value">${fmt$(pen)}</div><div class="stat-sub">${Math.round(pen/tot*100)}%</div></div>
+      <div class="stat-card stat-danger"><div class="stat-label">Vencido</div><div class="stat-value">${fmt$(venc)}</div><div class="stat-sub">${Math.round(venc/tot*100)}%</div></div>
+    </div>
+    <div style="display:flex;height:14px;border-radius:7px;overflow:hidden">
+      <div style="width:${Math.round(cob/tot*100)}%;background:var(--ok)"></div>
+      <div style="width:${Math.round(pen/tot*100)}%;background:var(--warn)"></div>
+      <div style="width:${Math.round(venc/tot*100)}%;background:var(--danger)"></div>
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:8px;font-size:11px;color:var(--text3)"><span style="color:var(--ok)">■</span> Cobrado <span style="color:var(--warn)">■</span> Pendiente <span style="color:var(--danger)">■</span> Vencido</div>
+  `;
+}
+
+function renderAll(){
+  renderDashboard();
+  const pend=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=7).length;
+  const badge=document.getElementById('badge-venc');badge.textContent=pend;badge.style.display=pend>0?'':'none';
+}
+
+// Enter en login
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('setup-screen').classList.contains('show'))authAction();});
+</script>
+</body>
+</html>

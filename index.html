@@ -133,6 +133,28 @@ textarea{height:80px;resize:vertical}
 .afip-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .afip-link{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:var(--radius);border:1px solid #aaccee;background:#f0f6ff;cursor:pointer;text-decoration:none;transition:all .15s}
 .afip-link:hover{background:#ddeeff;border-color:var(--afip)}
+.cal-wrap{display:grid;grid-template-columns:auto 1fr;gap:1.25rem;align-items:start}
+.cal-grid{min-width:220px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.cal-title{font-family:var(--serif);font-size:16px}
+.cal-nav{background:none;border:none;cursor:pointer;color:var(--text2);padding:4px 8px;border-radius:6px;font-size:16px;line-height:1;transition:background .15s}
+.cal-nav:hover{background:var(--bg)}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-dow{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;padding:3px 0}
+.cal-day{font-size:12px;padding:5px 2px;border-radius:6px;cursor:default;position:relative;line-height:1.2}
+.cal-day.other{color:var(--text3)}
+.cal-day.today{background:var(--accent);color:white;font-weight:600}
+.cal-day.has-venc{background:var(--warn-light);color:var(--warn);font-weight:600;cursor:pointer}
+.cal-day.has-venc:hover{background:var(--warn);color:white}
+.cal-day.today.has-venc{background:var(--danger);color:white}
+.cal-dot{width:4px;height:4px;border-radius:50%;background:currentColor;margin:1px auto 0}
+.cal-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.cal-item{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);font-size:12px}
+.cal-item-date{font-weight:600;color:var(--text);white-space:nowrap;min-width:40px}
+.cal-item-info{flex:1}
+.cal-item-tipo{font-weight:500;color:var(--text);margin-bottom:1px}
+.cal-item-sub{color:var(--text3);font-size:11px}
+.cal-empty{text-align:center;color:var(--text3);font-size:13px;padding:2rem 0}
 .afip-link-title{font-size:13px;font-weight:500;color:var(--afip)}
 .afip-link-desc{font-size:11px;color:#5577aa}
 .sugs-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
@@ -231,6 +253,32 @@ textarea{height:80px;resize:vertical}
     <div class="content">
       <div class="section active" id="s-inicio">
         <div class="stats-grid" id="dash-stats"></div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-header">
+            <div><div class="card-title">Calendario de vencimientos ARCA / ARBA</div><div class="card-subtitle">Fechas generales del mes — terminación CUIT promedio</div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <select id="cal-cuit-term" onchange="renderCalendario()" style="font-size:12px;width:auto">
+                <option value="0">Term. CUIT 0</option><option value="1">Term. CUIT 1</option><option value="2">Term. CUIT 2</option>
+                <option value="3">Term. CUIT 3</option><option value="4">Term. CUIT 4</option><option value="5" selected>Term. CUIT 5</option>
+                <option value="6">Term. CUIT 6</option><option value="7">Term. CUIT 7</option><option value="8">Term. CUIT 8</option><option value="9">Term. CUIT 9</option>
+              </select>
+            </div>
+          </div>
+          <div class="cal-wrap">
+            <div class="cal-grid">
+              <div class="cal-header">
+                <button class="cal-nav" onclick="calNav(-1)">&#8249;</button>
+                <div class="cal-title" id="cal-month-label"></div>
+                <button class="cal-nav" onclick="calNav(1)">&#8250;</button>
+              </div>
+              <div class="cal-days" id="cal-grid"></div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px" id="cal-list-label">Vencimientos del mes</div>
+              <div class="cal-list" id="cal-list"></div>
+            </div>
+          </div>
+        </div>
         <div class="two-col">
           <div class="card"><div class="card-header"><div><div class="card-title">Próximos vencimientos</div><div class="card-subtitle">Siguientes 15 días</div></div></div><div id="dash-venc"></div></div>
           <div class="card"><div class="card-header"><div><div class="card-title">Cobros pendientes</div></div></div><div id="dash-cobros"></div></div>
@@ -773,6 +821,7 @@ function showApp(){
   document.getElementById('user-avatar').textContent=name.slice(0,2).toUpperCase();
   document.getElementById('sf-date').textContent=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
   renderAll();
+  renderCalendario();
   renderTopbarActions('inicio');
 }
 
@@ -1352,6 +1401,97 @@ async function importarSugeridas(){
   closeModal('modal-import-afip');renderAll();
 }
 function consultarCuit(){const cuit=document.getElementById('cuit-consulta').value.replace(/\D/g,'');if(cuit.length<10){toast('Ingresá un CUIT válido');return;}window.open(`https://sdi.afip.gob.ar/consulta-cuit/resultados?cuit=${cuit}`,'_blank');}
+
+// ═══════════════════════════════════════════
+// CALENDARIO INICIO
+// ═══════════════════════════════════════════
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth()+1;
+
+function calNav(dir){
+  calMonth+=dir;
+  if(calMonth>12){calMonth=1;calYear++;}
+  if(calMonth<1){calMonth=12;calYear--;}
+  renderCalendario();
+}
+
+function getVencimientosDelMes(mes, anio, term){
+  // Genera lista de vencimientos ARCA/ARBA para el mes/año con la terminación dada
+  const t=parseInt(term);
+  const items=[];
+  const push=(tipo,fecha,org,detalle)=>{if(fecha&&fecha.startsWith(`${anio}-`)){const[,m]=fecha.split('-');if(parseInt(m)===mes)items.push({tipo,fecha,org,detalle});}};
+
+  // IVA RI
+  push('IVA mensual (RI)',getAfip('IVA_RI',mes,t),'ARCA','Responsable Inscripto');
+  // IIBB
+  push('IIBB — Conv. Multilateral',getAfip('IIBB',mes,t),'ARBA','Convenio Multilateral');
+  // Monotributo
+  push('Monotributo',getAfip('MONO',mes,t),'ARCA','Pequeños contribuyentes');
+  // SICORE
+  push('SICORE — Ganancias',getAfip('SICORE',mes,t),'ARCA','Agentes retención/percepción');
+  // Ganancias y Bienes (solo junio)
+  if(mes===6){
+    push('Ganancias DDJJ Anual',getAfip('GANANCIAS',mes,t),'ARCA','Personas humanas');
+    push('Bienes Personales DDJJ',getAfip('BIENES',mes,t),'ARCA','Personas humanas');
+  }
+
+  // SICORE del mes anterior (vence en este mes) — días 9/10/11
+  // Ya incluido via getAfip('SICORE', mes-1, t) que cae en este mes
+  const mesPrev=mes===1?12:mes-1;
+  const anioP=mes===1?anio-1:anio;
+  const fSicPrev=getAfip('SICORE',mesPrev,t);
+  if(fSicPrev&&fSicPrev.startsWith(`${anio}-${String(mes).padStart(2,'0')}`)){
+    // Already included above if it falls in this month — avoid duplicate
+    const alreadyIn=items.some(i=>i.fecha===fSicPrev&&i.tipo==='SICORE — Ganancias');
+    if(!alreadyIn)push('SICORE — Ganancias (mes ant.)',fSicPrev,'ARCA','Agentes ret./perc. período anterior');
+  }
+
+  return items.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+}
+
+function renderCalendario(){
+  const term=document.getElementById('cal-cuit-term')?.value||'5';
+  const items=getVencimientosDelMes(calMonth,calYear,term);
+  const vencDias=new Set(items.map(i=>parseInt(i.fecha.split('-')[2])));
+
+  // Header
+  const label=`${MESES[calMonth]} ${calYear}`;
+  document.getElementById('cal-month-label').textContent=label;
+  document.getElementById('cal-list-label').textContent=`Vencimientos — ${label}`;
+
+  // Grid
+  const todayStr=today();
+  const todayD=new Date(todayStr+'T00:00:00');
+  const firstDay=new Date(calYear,calMonth-1,1).getDay(); // 0=dom
+  const daysInMonth=new Date(calYear,calMonth,0).getDate();
+  const dows=['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+  let html=dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  // Empty cells before day 1
+  for(let i=0;i<firstDay;i++)html+=`<div class="cal-day other"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${calYear}-${String(calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=dateStr===todayStr;
+    const hasVenc=vencDias.has(d);
+    let cls='cal-day';
+    if(isToday)cls+=' today';
+    if(hasVenc)cls+=' has-venc';
+    const dot=hasVenc&&!isToday?'<div class="cal-dot"></div>':'';
+    html+=`<div class="${cls}" title="${hasVenc?items.filter(i=>parseInt(i.fecha.split('-')[2])===d).map(i=>i.tipo).join(', '):''}">${d}${dot}</div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+
+  // List
+  const listEl=document.getElementById('cal-list');
+  if(!items.length){listEl.innerHTML='<div class="cal-empty">No hay vencimientos este mes</div>';return;}
+  const orgColor={ARCA:'badge-afip',ARBA:'badge-blue'};
+  listEl.innerHTML=items.map(i=>`
+    <div class="cal-item">
+      <div class="cal-item-date">${fmtDate(i.fecha)}</div>
+      <div class="cal-item-info">
+        <div class="cal-item-tipo">${i.tipo} <span class="badge ${orgColor[i.org]||'badge-neutral'}" style="font-size:9px">${i.org}</span></div>
+        <div class="cal-item-sub">${i.detalle}</div>
+      </div>
+    </div>`).join('');
+}
 
 // ═══════════════════════════════════════════
 // DASHBOARD

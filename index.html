@@ -22,8 +22,6 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px}
-
-/* LOADING SCREEN */
 #loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;gap:16px}
 #loading-screen h1{font-family:var(--serif);font-size:28px;color:var(--text)}
 #loading-screen p{font-size:13px;color:var(--text3)}
@@ -31,7 +29,6 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--t
 @keyframes spin{to{transform:rotate(360deg)}}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px;animation:pulse 2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
 .app{display:flex;height:100vh;overflow:hidden}
 .sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0 0 1rem}
 .sidebar-brand{padding:1.5rem 1.25rem 1.25rem;border-bottom:1px solid var(--border);margin-bottom:.75rem}
@@ -145,12 +142,8 @@ textarea{height:80px;resize:vertical}
 .confirm-modal .modal{width:340px;text-align:center}
 .confirm-msg{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
 .confirm-actions{display:flex;gap:8px;justify-content:center}
-
-/* USER TAG */
 .user-tag{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 10px}
 .user-avatar{width:22px;height:22px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
-
-/* SETUP SCREEN */
 #setup-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:900}
 #setup-screen.show{display:flex}
 .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem;width:420px;box-shadow:var(--shadow)}
@@ -160,20 +153,17 @@ textarea{height:80px;resize:vertical}
 .setup-tab{flex:1;padding:8px;font-size:13px;cursor:pointer;border:none;background:none;font-family:var(--sans);color:var(--text2);transition:all .15s}
 .setup-tab.active{background:var(--accent);color:white;font-weight:500}
 .setup-error{font-size:12px;color:var(--danger);margin-top:8px;display:none}
-
 @media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.afip-grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
 <div id="loading-screen">
   <div class="spinner"></div>
   <h1>Estudio Contable</h1>
   <p id="loading-msg">Conectando con la base de datos...</p>
 </div>
 
-<!-- LOGIN / REGISTRO -->
 <div id="setup-screen">
   <div class="setup-card">
     <div class="setup-title">Estudio Contable</div>
@@ -191,7 +181,6 @@ textarea{height:80px;resize:vertical}
   </div>
 </div>
 
-<!-- APP -->
 <div class="app" id="main-app" style="display:none">
   <div class="sidebar">
     <div class="sidebar-brand">
@@ -237,7 +226,6 @@ textarea{height:80px;resize:vertical}
       <div class="topbar-right" id="topbar-actions"></div>
     </div>
     <div class="content">
-
       <div class="section active" id="s-inicio">
         <div class="stats-grid" id="dash-stats"></div>
         <div class="two-col">
@@ -245,7 +233,6 @@ textarea{height:80px;resize:vertical}
           <div class="card"><div class="card-header"><div><div class="card-title">Cobros pendientes</div></div></div><div id="dash-cobros"></div></div>
         </div>
       </div>
-
       <div class="section" id="s-clientes">
         <div class="card">
           <div class="card-header">
@@ -261,7 +248,6 @@ textarea{height:80px;resize:vertical}
           <div id="empty-clientes" class="empty" style="display:none"><p>No hay clientes todavía.</p></div>
         </div>
       </div>
-
       <div class="section" id="s-vencimientos">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
           <div class="tabs">
@@ -282,7 +268,6 @@ textarea{height:80px;resize:vertical}
           <div id="empty-venc" class="empty" style="display:none"><p>No hay tareas. Agregá la primera o importá desde AFIP.</p></div>
         </div>
       </div>
-
       <div class="section" id="s-cobros">
         <div class="stats-grid" id="cobros-stats"></div>
         <div class="card">
@@ -299,7 +284,6 @@ textarea{height:80px;resize:vertical}
           <div id="empty-cobros" class="empty" style="display:none"><p>No hay cobros registrados.</p></div>
         </div>
       </div>
-
       <div class="section" id="s-reportes">
         <div class="two-col">
           <div class="card"><div class="card-header"><div class="card-title">Clientes por categoría</div></div><div id="rep-categorias"></div></div>
@@ -307,7 +291,6 @@ textarea{height:80px;resize:vertical}
         </div>
         <div class="card"><div class="card-header"><div class="card-title">Resumen de cobros</div></div><div id="rep-cobros-resumen"></div></div>
       </div>
-
       <div class="section" id="s-afip">
         <div class="alert alert-afip" style="margin-bottom:1.25rem">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
@@ -335,15 +318,15 @@ textarea{height:80px;resize:vertical}
         <div class="card">
           <div class="card-header"><div class="card-title">Accesos directos AFIP</div></div>
           <div class="afip-grid">
-            <a class="afip-link" href="https://auth.afip.gob.ar/contribuyente_/login.xhtml" target="_blank"><div class="afip-link-title">🔐 Clave Fiscal</div><div class="afip-link-desc">Acceso con CUIT y clave</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/vencimientosPortal/Default.aspx" target="_blank"><div class="afip-link-title">📅 Vencimientos AFIP</div><div class="afip-link-desc">Calendario oficial</div></a>
-            <a class="afip-link" href="https://www.afip.gob.ar/monotributo/acceso.asp" target="_blank"><div class="afip-link-title">📋 Monotributo</div><div class="afip-link-desc">Portal simplificado</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/IVA/default.aspx" target="_blank"><div class="afip-link-title">🧾 IVA en línea</div><div class="afip-link-desc">Declaración jurada</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/SIAP/default.aspx" target="_blank"><div class="afip-link-title">💻 SIAP</div><div class="afip-link-desc">Sistema Integrado</div></a>
-            <a class="afip-link" href="https://www.afip.gob.ar/genericos/formularios/formularios.asp" target="_blank"><div class="afip-link-title">📄 Formularios</div><div class="afip-link-desc">Descarga oficial</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/ganancias4/default.aspx" target="_blank"><div class="afip-link-title">💰 Ganancias F.711</div><div class="afip-link-desc">DDJJ anual</div></a>
-            <a class="afip-link" href="https://www.afip.gob.ar/institucional/estudiosContables.asp" target="_blank"><div class="afip-link-title">🏢 Estudios Contables</div><div class="afip-link-desc">Portal para contadores</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/constanciaInscripcion/Default.aspx" target="_blank"><div class="afip-link-title">📃 Constancia Inscripción</div><div class="afip-link-desc">Consulta y descarga</div></a>
+            <a class="afip-link" href="https://auth.afip.gob.ar/contribuyente_/login.xhtml" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🔐 Clave Fiscal</div><div class="afip-link-desc">Acceso con CUIT y clave</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/vencimientosPortal/Default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📅 Vencimientos AFIP</div><div class="afip-link-desc">Calendario oficial</div></a>
+            <a class="afip-link" href="https://www.afip.gob.ar/monotributo/acceso.asp" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📋 Monotributo</div><div class="afip-link-desc">Portal simplificado</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/IVA/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🧾 IVA en línea</div><div class="afip-link-desc">Declaración jurada</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/SIAP/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">💻 SIAP</div><div class="afip-link-desc">Sistema Integrado</div></a>
+            <a class="afip-link" href="https://www.afip.gob.ar/genericos/formularios/formularios.asp" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📄 Formularios</div><div class="afip-link-desc">Descarga oficial</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/ganancias4/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">💰 Ganancias F.711</div><div class="afip-link-desc">DDJJ anual</div></a>
+            <a class="afip-link" href="https://www.afip.gob.ar/institucional/estudiosContables.asp" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🏢 Estudios Contables</div><div class="afip-link-desc">Portal para contadores</div></a>
+            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/constanciaInscripcion/Default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📃 Constancia Inscripción</div><div class="afip-link-desc">Consulta y descarga</div></a>
           </div>
         </div>
         <div class="card">
@@ -355,7 +338,6 @@ textarea{height:80px;resize:vertical}
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
@@ -377,7 +359,6 @@ textarea{height:80px;resize:vertical}
     <div class="modal-footer"><button class="btn" onclick="closeModal('modal-cliente')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-cliente" onclick="guardarCliente()">Guardar cliente</button></div>
   </div>
 </div>
-
 <div class="modal-bg" id="modal-venc">
   <div class="modal">
     <div class="modal-title" id="mv-title">Nueva tarea</div>
@@ -392,7 +373,6 @@ textarea{height:80px;resize:vertical}
     <div class="modal-footer"><button class="btn" onclick="closeModal('modal-venc')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-venc" onclick="guardarVencimiento()">Guardar tarea</button></div>
   </div>
 </div>
-
 <div class="modal-bg" id="modal-cobro">
   <div class="modal">
     <div class="modal-title" id="mcob-title">Registrar cobro</div>
@@ -408,11 +388,9 @@ textarea{height:80px;resize:vertical}
     <div class="modal-footer"><button class="btn" onclick="closeModal('modal-cobro')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-cobro" onclick="guardarCobro()">Guardar cobro</button></div>
   </div>
 </div>
-
 <div class="modal-bg" id="modal-ficha">
   <div class="modal"><div id="ficha-content"></div><div class="modal-footer"><button class="btn" onclick="closeModal('modal-ficha')">Cerrar</button></div></div>
 </div>
-
 <div class="modal-bg" id="modal-import-afip">
   <div class="modal">
     <div class="modal-title" id="mia-title">Vencimientos AFIP</div>
@@ -422,7 +400,6 @@ textarea{height:80px;resize:vertical}
     <div class="modal-footer"><button class="btn" onclick="closeModal('modal-import-afip')">Cancelar</button><button class="btn btn-afip" onclick="importarSugeridas()">Importar seleccionadas</button></div>
   </div>
 </div>
-
 <div class="modal-bg confirm-modal" id="modal-confirm">
   <div class="modal" style="width:340px;text-align:center">
     <div class="modal-title" id="confirm-title">¿Eliminar?</div>
@@ -440,53 +417,6 @@ textarea{height:80px;resize:vertical}
 const SUPABASE_URL = 'https://bwsrvaozpwhufnqowjej.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3c3J2YW96cHdodWZucW93amVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzQxMjMsImV4cCI6MjA5MTE1MDEyM30.ui0YDGKHWTv1hmlL5rnCg5nrcZ9JdGZJfl5vAQ3lB9Q';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// SQL para crear tablas (se ejecuta via RPC o manualmente)
-const SETUP_SQL = `
-create table if not exists clientes (
-  id uuid primary key default gen_random_uuid(),
-  nombre text not null,
-  cuit text,
-  categoria text default 'Responsable Inscripto',
-  email text,
-  tel text,
-  honorario numeric,
-  estado text default 'Activo',
-  notas text,
-  created_at timestamptz default now(),
-  created_by uuid references auth.users(id)
-);
-create table if not exists vencimientos (
-  id uuid primary key default gen_random_uuid(),
-  cliente_id uuid references clientes(id) on delete cascade,
-  tipo text,
-  fecha date,
-  responsable text,
-  estado text default 'pendiente',
-  notas text,
-  origen text default 'manual',
-  created_at timestamptz default now(),
-  created_by uuid references auth.users(id)
-);
-create table if not exists cobros (
-  id uuid primary key default gen_random_uuid(),
-  cliente_id uuid references clientes(id) on delete cascade,
-  concepto text,
-  importe numeric,
-  vencimiento date,
-  fecha_cobro date,
-  medio text,
-  estado text default 'pendiente',
-  created_at timestamptz default now(),
-  created_by uuid references auth.users(id)
-);
-alter table clientes enable row level security;
-alter table vencimientos enable row level security;
-alter table cobros enable row level security;
-create policy if not exists "todos_autenticados_clientes" on clientes for all to authenticated using (true) with check (true);
-create policy if not exists "todos_autenticados_vencimientos" on vencimientos for all to authenticated using (true) with check (true);
-create policy if not exists "todos_autenticados_cobros" on cobros for all to authenticated using (true) with check (true);
-`;
 
 // ═══════════════════════════════════════════
 // AFIP 2026
@@ -552,7 +482,7 @@ async function authAction(){
     }
     if(res.error)throw res.error;
     if(setupMode==='register'&&!res.data.session){
-      errEl.textContent='¡Cuenta creada! Revisá tu email para confirmar (o desactivá la confirmación en Supabase).';
+      errEl.textContent='¡Cuenta creada! Revisá tu email para confirmar.';
       errEl.style.color='var(--ok)';errEl.style.display='block';
     }
   }catch(e){
@@ -594,26 +524,17 @@ async function init(){
   });
 }
 
-function showLoading(msg){
-  document.getElementById('loading-screen').style.display='flex';
-  document.getElementById('loading-msg').textContent=msg||'Cargando...';
-}
+function showLoading(msg){document.getElementById('loading-screen').style.display='flex';document.getElementById('loading-msg').textContent=msg||'Cargando...';}
 function hideLoading(){document.getElementById('loading-screen').style.display='none';}
 function setLoadingMsg(m){document.getElementById('loading-msg').textContent=m;}
 
 async function setupTables(){
   setLoadingMsg('Preparando base de datos...');
-  // Intentar crear tablas via RPC si existe, si no simplemente continuar
-  // Las tablas deben crearse manualmente en Supabase SQL Editor
-  try{
-    await sb.from('clientes').select('id').limit(1);
-  }catch(e){
-    console.log('Tablas no encontradas, crear manualmente');
-  }
+  try{await sb.from('clientes').select('id').limit(1);}catch(e){console.log('Tablas no encontradas');}
 }
 
 async function loadAll(){
-  setLoadingMsg('Cargando clientes...');
+  setLoadingMsg('Cargando datos...');
   const[{data:clientes},{data:vencimientos},{data:cobros}]=await Promise.all([
     sb.from('clientes').select('*').order('nombre'),
     sb.from('vencimientos').select('*').order('fecha'),
@@ -636,6 +557,65 @@ function showApp(){
 }
 
 init();
+
+// ═══════════════════════════════════════════
+// VOLVER A LA PESTAÑA — recarga automática
+// ═══════════════════════════════════════════
+let lastHidden = null;
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'hidden') {
+    lastHidden = Date.now();
+    return;
+  }
+
+  // Volvió a la pestaña
+  if (document.visibilityState === 'visible') {
+    const ausencia = lastHidden ? Date.now() - lastHidden : 0;
+
+    // Si estuvo fuera menos de 30 segundos, no hacer nada
+    if (ausencia < 30000) return;
+
+    const appVisible = document.getElementById('main-app')?.style.display === 'flex';
+
+    // Si la app está abierta y hay sesión, refrescar datos silenciosamente
+    if (appVisible && currentUser) {
+      try {
+        setSyncing(true);
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          currentUser = session.user;
+          await loadAll();
+          renderAll();
+          // Re-renderizar la sección activa
+          const activeSection = document.querySelector('.section.active')?.id?.replace('s-', '');
+          if (activeSection) {
+            const fn = { clientes:renderClientes, vencimientos:renderVencimientos, cobros:renderCobros, reportes:renderReportes };
+            if (fn[activeSection]) fn[activeSection]();
+          }
+        } else {
+          // La sesión expiró — volver al login
+          currentUser = null;
+          document.getElementById('main-app').style.display = 'none';
+          document.getElementById('setup-screen').classList.add('show');
+          toast('Tu sesión expiró. Ingresá nuevamente.');
+        }
+        setSyncing(false);
+      } catch(e) {
+        setSyncing(false);
+        console.log('Error al refrescar sesión:', e);
+      }
+      return;
+    }
+
+    // Si no hay nada visible, reiniciar la app
+    const loginVisible = document.getElementById('setup-screen')?.classList.contains('show');
+    const loadingVisible = document.getElementById('loading-screen')?.style.display !== 'none';
+    if (!appVisible && !loginVisible && !loadingVisible) {
+      init();
+    }
+  }
+});
 
 // ═══════════════════════════════════════════
 // NAV

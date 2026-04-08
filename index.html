@@ -411,11 +411,15 @@ textarea{height:80px;resize:vertical}
       <div class="form-row" style="grid-column:1/-1;display:flex;gap:2rem;align-items:center;padding:6px 0">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)">
           <input type="checkbox" id="mc-agente-ret" style="width:auto">
-          <span>Agente de retención</span>
+          <span>Agente de retención Ganancias (SICORE)</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)">
+          <input type="checkbox" id="mc-agente-perc-gan" style="width:auto">
+          <span>Agente de percepción Ganancias (SICORE)</span>
         </label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)">
           <input type="checkbox" id="mc-agente-perc" style="width:auto">
-          <span>Agente de percepción</span>
+          <span>Agente de percepción IIBB (ARBA)</span>
         </label>
       </div>
     </div>
@@ -540,6 +544,22 @@ const AFIP={
     10:{0:'2026-10-20',1:'2026-10-20',2:'2026-10-20',3:'2026-10-20',4:'2026-10-20',5:'2026-10-20',6:'2026-10-20',7:'2026-10-20',8:'2026-10-20',9:'2026-10-20'},
     11:{0:'2026-11-20',1:'2026-11-20',2:'2026-11-20',3:'2026-11-20',4:'2026-11-20',5:'2026-11-20',6:'2026-11-20',7:'2026-11-20',8:'2026-11-20',9:'2026-11-20'},
     12:{0:'2026-12-21',1:'2026-12-21',2:'2026-12-21',3:'2026-12-21',4:'2026-12-21',5:'2026-12-21',6:'2026-12-21',7:'2026-12-21',8:'2026-12-21',9:'2026-12-21'}
+  },
+  // SICORE Ganancias — DDJJ mensual, vence días 9/10/11 del mes siguiente según terminación
+  // term 0,1,2,3 → día 9 | term 4,5,6 → día 10 | term 7,8,9 → día 11
+  SICORE:{
+    1:{0:'2026-02-09',1:'2026-02-09',2:'2026-02-09',3:'2026-02-09',4:'2026-02-10',5:'2026-02-10',6:'2026-02-10',7:'2026-02-11',8:'2026-02-11',9:'2026-02-11'},
+    2:{0:'2026-03-09',1:'2026-03-09',2:'2026-03-09',3:'2026-03-09',4:'2026-03-10',5:'2026-03-10',6:'2026-03-10',7:'2026-03-11',8:'2026-03-11',9:'2026-03-11'},
+    3:{0:'2026-04-09',1:'2026-04-09',2:'2026-04-09',3:'2026-04-09',4:'2026-04-10',5:'2026-04-10',6:'2026-04-10',7:'2026-04-13',8:'2026-04-13',9:'2026-04-13'},
+    4:{0:'2026-05-11',1:'2026-05-11',2:'2026-05-11',3:'2026-05-11',4:'2026-05-12',5:'2026-05-12',6:'2026-05-12',7:'2026-05-13',8:'2026-05-13',9:'2026-05-13'},
+    5:{0:'2026-06-09',1:'2026-06-09',2:'2026-06-09',3:'2026-06-09',4:'2026-06-10',5:'2026-06-10',6:'2026-06-10',7:'2026-06-11',8:'2026-06-11',9:'2026-06-11'},
+    6:{0:'2026-07-09',1:'2026-07-09',2:'2026-07-09',3:'2026-07-09',4:'2026-07-10',5:'2026-07-10',6:'2026-07-10',7:'2026-07-13',8:'2026-07-13',9:'2026-07-13'},
+    7:{0:'2026-08-10',1:'2026-08-10',2:'2026-08-10',3:'2026-08-10',4:'2026-08-11',5:'2026-08-11',6:'2026-08-11',7:'2026-08-12',8:'2026-08-12',9:'2026-08-12'},
+    8:{0:'2026-09-09',1:'2026-09-09',2:'2026-09-09',3:'2026-09-09',4:'2026-09-10',5:'2026-09-10',6:'2026-09-10',7:'2026-09-11',8:'2026-09-11',9:'2026-09-11'},
+    9:{0:'2026-10-09',1:'2026-10-09',2:'2026-10-09',3:'2026-10-09',4:'2026-10-12',5:'2026-10-12',6:'2026-10-12',7:'2026-10-13',8:'2026-10-13',9:'2026-10-13'},
+    10:{0:'2026-11-09',1:'2026-11-09',2:'2026-11-09',3:'2026-11-09',4:'2026-11-10',5:'2026-11-10',6:'2026-11-10',7:'2026-11-11',8:'2026-11-11',9:'2026-11-11'},
+    11:{0:'2026-12-09',1:'2026-12-09',2:'2026-12-09',3:'2026-12-09',4:'2026-12-10',5:'2026-12-10',6:'2026-12-10',7:'2026-12-11',8:'2026-12-11',9:'2026-12-11'},
+    12:{0:'2027-01-11',1:'2027-01-11',2:'2027-01-11',3:'2027-01-11',4:'2027-01-12',5:'2027-01-12',6:'2027-01-12',7:'2027-01-13',8:'2027-01-13',9:'2027-01-13'}
   }
 };
 const MESES=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -581,10 +601,16 @@ function generarSugs(cliente,mes){
   // iibb==='' → No contribuyente → no se agrega vencimiento de IIBB
 
   // ── Agente de retención SICORE (Ganancias — ARCA) ──
-  // Usa mismo calendario que IVA RI (segunda quincena, por terminación CUIT)
+  // Vence días 9/10/11 del mes siguiente según terminación CUIT
   if(esAgRet){
-    const f=getAfip('IVA_RI',mes,t);
+    const f=getAfip('SICORE',mes,t);
     if(f)s.push({tipo:'SICORE — Retención Ganancias',fecha:f,org:'ARCA'});
+  }
+  // ── Agente de percepción Ganancias SICORE (ARCA) ───
+  const esAgPercGan=!!(cliente.agente_percepcion_ganancias);
+  if(esAgPercGan){
+    const f=getAfip('SICORE',mes,t);
+    if(f)s.push({tipo:'SICORE — Percepción Ganancias',fecha:f,org:'ARCA'});
   }
   // ── Agente de percepción IIBB (ARBA) ───────────────
   if(esAgPerc){
@@ -817,8 +843,9 @@ function iiBBBadge(c){
   const lbl=iiBBLabel(c.iibb_regimen);
   const parts=[];
   if(lbl)parts.push(`<span class="badge badge-blue" style="font-size:10px">IIBB ${lbl}</span>`);
-  if(c.agente_retencion)parts.push(`<span class="badge badge-warn" style="font-size:10px">Ag. Ret.</span>`);
-  if(c.agente_percepcion)parts.push(`<span class="badge badge-warn" style="font-size:10px">Ag. Perc.</span>`);
+  if(c.agente_retencion)parts.push(`<span class="badge badge-warn" style="font-size:10px">Ret. Gan.</span>`);
+  if(c.agente_percepcion_ganancias)parts.push(`<span class="badge badge-warn" style="font-size:10px">Perc. Gan.</span>`);
+  if(c.agente_percepcion)parts.push(`<span class="badge badge-blue" style="font-size:10px">Perc. IIBB</span>`);
   return parts.join(' ');
 }
 function catBadge(c){if(c==='Responsable Inscripto')return`<span class="badge badge-blue">RI</span>`;if(c==='Monotributo')return`<span class="badge badge-accent">Mono</span>`;return`<span class="badge badge-neutral">${c||'—'}</span>`;}
@@ -858,6 +885,7 @@ function openModalCliente(id){
   document.getElementById('mc-estado').value=c?.estado||'Activo';
   document.getElementById('mc-iibb').value=c?.iibb_regimen||'';
   document.getElementById('mc-agente-ret').checked=!!(c?.agente_retencion);
+  document.getElementById('mc-agente-perc-gan').checked=!!(c?.agente_percepcion_ganancias);
   document.getElementById('mc-agente-perc').checked=!!(c?.agente_percepcion);
   openModal('modal-cliente');
 }
@@ -866,7 +894,7 @@ async function guardarCliente(){
   if(!nombre){toast('El nombre es obligatorio');return;}
   const btn=document.getElementById('btn-guardar-cliente');btn.disabled=true;
   setSyncing(true);
-  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,created_by:currentUser.id};
+  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion_ganancias:document.getElementById('mc-agente-perc-gan').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,created_by:currentUser.id};
   let res;
   if(editId){res=await sb.from('clientes').update(data).eq('id',editId).select().single();}
   else{res=await sb.from('clientes').insert(data).select().single();}
@@ -932,7 +960,7 @@ function verFicha(id){
       <div><div class="ficha-key">Tareas activas</div><div class="ficha-val">${venc.filter(v=>v.estado!=='completado').length}</div></div>
       <div><div class="ficha-key">Cobros pendientes</div><div class="ficha-val" style="color:${pendCob>0?'var(--warn)':'var(--ok)'}">${fmt$(pendCob)}</div></div>
       <div><div class="ficha-key">Ingresos Brutos</div><div class="ficha-val">${iiBBLabel(c.iibb_regimen)||'No contribuyente'}</div></div>
-      <div><div class="ficha-key">Agente</div><div class="ficha-val">${[c.agente_retencion?'Retención':null,c.agente_percepcion?'Percepción':null].filter(Boolean).join(' · ')||'—'}</div></div>
+      <div><div class="ficha-key">Agente</div><div class="ficha-val">${[c.agente_retencion?'Ret. Ganancias (SICORE)':null,c.agente_percepcion_ganancias?'Perc. Ganancias (SICORE)':null,c.agente_percepcion?'Perc. IIBB (ARBA)':null].filter(Boolean).join(' · ')||'—'}</div></div>
     </div>
     ${c.notas?`<div style="margin-top:1rem;padding:10px;background:var(--bg);border-radius:var(--radius);font-size:13px;color:var(--text2)">${c.notas}</div>`:''}
     <div style="margin-top:1.25rem"><button class="btn btn-afip btn-sm" onclick="closeModal('modal-ficha');abrirImportAfipDirecto('${c.id}')">Sugerir vencimientos AFIP</button></div>

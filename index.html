@@ -499,28 +499,63 @@ async function logout(){
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
+// Wrapper con timeout para cualquier promesa
+function withTimeout(promise, ms=10000, msg='Tiempo de espera agotado') {
+  return Promise.race([
+    promise,
+    new Promise((_,reject) => setTimeout(() => reject(new Error(msg)), ms))
+  ]);
+}
+
 async function init(){
   setLoadingMsg('Verificando sesión...');
-  const{data:{session}}=await sb.auth.getSession();
-  if(session){
-    currentUser=session.user;
-    await setupTables();
-    await loadAll();
-    showApp();
-  }else{
-    hideLoading();
-    document.getElementById('setup-screen').classList.add('show');
-  }
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session){
-      currentUser=session.user;
-      document.getElementById('setup-screen').classList.remove('show');
-      showLoading('Cargando datos...');
-      await setupTables();
+  // Timeout de seguridad global: si en 15s no cargó, mostramos error recuperable
+  const safetyTimer = setTimeout(() => {
+    const ls = document.getElementById('loading-screen');
+    if (ls && ls.style.display !== 'none') {
+      hideLoading();
+      document.getElementById('setup-screen').classList.add('show');
+      document.getElementById('auth-error').textContent = 'No se pudo conectar. Verificá tu conexión e intentá de nuevo.';
+      document.getElementById('auth-error').style.display = 'block';
+    }
+  }, 15000);
+
+  try {
+    const { data: { session }, error } = await withTimeout(sb.auth.getSession(), 10000);
+    if (error) throw error;
+    if (session) {
+      currentUser = session.user;
       await loadAll();
       showApp();
+    } else {
+      hideLoading();
+      document.getElementById('setup-screen').classList.add('show');
     }
-    if(event==='SIGNED_OUT'){currentUser=null;}
+  } catch(e) {
+    console.error('Error en init:', e);
+    hideLoading();
+    document.getElementById('setup-screen').classList.add('show');
+    document.getElementById('auth-error').textContent = 'Error de conexión. Revisá tu red e intentá de nuevo.';
+    document.getElementById('auth-error').style.display = 'block';
+  } finally {
+    clearTimeout(safetyTimer);
+  }
+
+  sb.auth.onAuthStateChange(async(event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      document.getElementById('setup-screen').classList.remove('show');
+      showLoading('Cargando datos...');
+      try {
+        await loadAll();
+        showApp();
+      } catch(e) {
+        hideLoading();
+        document.getElementById('setup-screen').classList.add('show');
+        toast('Error al cargar datos. Intentá de nuevo.');
+      }
+    }
+    if (event === 'SIGNED_OUT') { currentUser = null; }
   });
 }
 
@@ -528,21 +563,25 @@ function showLoading(msg){document.getElementById('loading-screen').style.displa
 function hideLoading(){document.getElementById('loading-screen').style.display='none';}
 function setLoadingMsg(m){document.getElementById('loading-msg').textContent=m;}
 
-async function setupTables(){
-  setLoadingMsg('Preparando base de datos...');
-  try{await sb.from('clientes').select('id').limit(1);}catch(e){console.log('Tablas no encontradas');}
-}
-
 async function loadAll(){
   setLoadingMsg('Cargando datos...');
-  const[{data:clientes},{data:vencimientos},{data:cobros}]=await Promise.all([
-    sb.from('clientes').select('*').order('nombre'),
-    sb.from('vencimientos').select('*').order('fecha'),
-    sb.from('cobros').select('*').order('created_at',{ascending:false})
-  ]);
-  db.clientes=clientes||[];
-  db.vencimientos=vencimientos||[];
-  db.cobros=cobros||[];
+  try {
+    const [r1, r2, r3] = await withTimeout(Promise.all([
+      sb.from('clientes').select('*').order('nombre'),
+      sb.from('vencimientos').select('*').order('fecha'),
+      sb.from('cobros').select('*').order('created_at', {ascending:false})
+    ]), 12000, 'Tiempo de carga agotado');
+    db.clientes  = r1.data || [];
+    db.vencimientos = r2.data || [];
+    db.cobros    = r3.data || [];
+  } catch(e) {
+    console.error('Error en loadAll:', e);
+    // Mantener datos anteriores si ya había algo cargado
+    db.clientes = db.clientes || [];
+    db.vencimientos = db.vencimientos || [];
+    db.cobros = db.cobros || [];
+    throw e; // re-lanzar para que el caller lo maneje
+  }
 }
 
 function showApp(){
@@ -562,6 +601,7 @@ init();
 // VOLVER A LA PESTAÑA — recarga automática
 // ═══════════════════════════════════════════
 let lastHidden = null;
+let reloadInProgress = false;
 
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState === 'hidden') {
@@ -569,50 +609,50 @@ document.addEventListener('visibilitychange', async () => {
     return;
   }
 
-  // Volvió a la pestaña
   if (document.visibilityState === 'visible') {
-    const ausencia = lastHidden ? Date.now() - lastHidden : 0;
+    // SIEMPRE limpiar el spinner al volver — pudo haber quedado trabado
+    hideLoading();
+    setSyncing(false);
 
-    // Si estuvo fuera menos de 30 segundos, no hacer nada
-    if (ausencia < 30000) return;
+    if (reloadInProgress) return;
 
+    // Si hay sesión activa y la app está visible, refrescar datos
     const appVisible = document.getElementById('main-app')?.style.display === 'flex';
-
-    // Si la app está abierta y hay sesión, refrescar datos silenciosamente
-    if (appVisible && currentUser) {
-      try {
-        setSyncing(true);
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-          currentUser = session.user;
-          await loadAll();
-          renderAll();
-          // Re-renderizar la sección activa
-          const activeSection = document.querySelector('.section.active')?.id?.replace('s-', '');
-          if (activeSection) {
-            const fn = { clientes:renderClientes, vencimientos:renderVencimientos, cobros:renderCobros, reportes:renderReportes };
-            if (fn[activeSection]) fn[activeSection]();
-          }
-        } else {
-          // La sesión expiró — volver al login
-          currentUser = null;
-          document.getElementById('main-app').style.display = 'none';
-          document.getElementById('setup-screen').classList.add('show');
-          toast('Tu sesión expiró. Ingresá nuevamente.');
-        }
-        setSyncing(false);
-      } catch(e) {
-        setSyncing(false);
-        console.log('Error al refrescar sesión:', e);
+    if (!currentUser || !appVisible) {
+      // No hay sesión o la app no está visible — verificar estado
+      if (!document.getElementById('setup-screen')?.classList.contains('show')) {
+        // Ni login ni app visible: reiniciar limpio
+        init();
       }
       return;
     }
 
-    // Si no hay nada visible, reiniciar la app
-    const loginVisible = document.getElementById('setup-screen')?.classList.contains('show');
-    const loadingVisible = document.getElementById('loading-screen')?.style.display !== 'none';
-    if (!appVisible && !loginVisible && !loadingVisible) {
-      init();
+    const ausencia = lastHidden ? Date.now() - lastHidden : 0;
+    if (ausencia < 30000) return; // menos de 30s, no refrescar datos
+
+    reloadInProgress = true;
+    try {
+      setSyncing(true);
+      const { data: { session } } = await withTimeout(sb.auth.getSession(), 8000);
+      if (session) {
+        currentUser = session.user;
+        await loadAll();
+        renderAll();
+        const activeId = document.querySelector('.section.active')?.id?.replace('s-', '');
+        const fn = { clientes:renderClientes, vencimientos:renderVencimientos, cobros:renderCobros, reportes:renderReportes };
+        if (activeId && fn[activeId]) fn[activeId]();
+      } else {
+        currentUser = null;
+        document.getElementById('main-app').style.display = 'none';
+        document.getElementById('setup-screen').classList.add('show');
+        toast('Tu sesión expiró. Ingresá nuevamente.');
+      }
+    } catch(e) {
+      console.log('Error al refrescar al volver:', e);
+      toast('Sin conexión. Los datos pueden no estar actualizados.');
+    } finally {
+      setSyncing(false);
+      reloadInProgress = false;
     }
   }
 });

@@ -600,59 +600,18 @@ init();
 // ═══════════════════════════════════════════
 // VOLVER A LA PESTAÑA — recarga automática
 // ═══════════════════════════════════════════
-let lastHidden = null;
-let reloadInProgress = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
 
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState === 'hidden') {
-    lastHidden = Date.now();
-    return;
-  }
-
-  if (document.visibilityState === 'visible') {
-    // SIEMPRE limpiar el spinner al volver — pudo haber quedado trabado
+  // Si hay usuario logueado, mostrar la app de inmediato sin esperar promesas
+  if (currentUser) {
     hideLoading();
     setSyncing(false);
-
-    if (reloadInProgress) return;
-
-    // Si hay sesión activa y la app está visible, refrescar datos
-    const appVisible = document.getElementById('main-app')?.style.display === 'flex';
-    if (!currentUser || !appVisible) {
-      // No hay sesión o la app no está visible — verificar estado
-      if (!document.getElementById('setup-screen')?.classList.contains('show')) {
-        // Ni login ni app visible: reiniciar limpio
-        init();
-      }
-      return;
-    }
-
-    const ausencia = lastHidden ? Date.now() - lastHidden : 0;
-    if (ausencia < 30000) return; // menos de 30s, no refrescar datos
-
-    reloadInProgress = true;
-    try {
-      setSyncing(true);
-      const { data: { session } } = await withTimeout(sb.auth.getSession(), 8000);
-      if (session) {
-        currentUser = session.user;
-        await loadAll();
-        renderAll();
-        const activeId = document.querySelector('.section.active')?.id?.replace('s-', '');
-        const fn = { clientes:renderClientes, vencimientos:renderVencimientos, cobros:renderCobros, reportes:renderReportes };
-        if (activeId && fn[activeId]) fn[activeId]();
-      } else {
-        currentUser = null;
-        document.getElementById('main-app').style.display = 'none';
-        document.getElementById('setup-screen').classList.add('show');
-        toast('Tu sesión expiró. Ingresá nuevamente.');
-      }
-    } catch(e) {
-      console.log('Error al refrescar al volver:', e);
-      toast('Sin conexión. Los datos pueden no estar actualizados.');
-    } finally {
-      setSyncing(false);
-      reloadInProgress = false;
+    const appEl = document.getElementById('main-app');
+    if (appEl.style.display !== 'flex') {
+      appEl.style.display = 'flex';
+      renderAll();
+      renderTopbarActions('inicio');
     }
   }
 });

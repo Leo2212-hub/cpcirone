@@ -205,6 +205,9 @@ textarea{height:80px;resize:vertical}
       <button class="nav-item" onclick="nav('reportes',this)">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Reportes
       </button>
+      <button class="nav-item" onclick="nav('accesos',this)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Accesos
+      </button>
       <div class="nav-sep"></div>
       <button class="nav-item" onclick="nav('afip',this)" style="color:var(--afip)">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>AFIP / Accesos
@@ -338,11 +341,53 @@ textarea{height:80px;resize:vertical}
           </div>
         </div>
       </div>
+      <div class="section" id="s-accesos">
+        <div class="card">
+          <div class="card-header">
+            <div class="search-wrap" style="width:220px">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" placeholder="Buscar cliente o servicio..." id="search-accesos" oninput="renderAccesos()">
+            </div>
+            <select id="filter-accesos-cliente" onchange="renderAccesos()" style="width:auto;font-size:12px;max-width:200px"><option value="">Todos los clientes</option></select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Cliente</th><th>Servicio</th><th>CUIT / Usuario</th><th>Contraseña</th><th>Notas</th><th></th></tr></thead>
+              <tbody id="tabla-accesos"></tbody>
+            </table>
+          </div>
+          <div id="empty-accesos" class="empty" style="display:none"><p>No hay accesos guardados. Agregá el primero.</p></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
 <!-- MODALES -->
+<div class="modal-bg" id="modal-acceso">
+  <div class="modal">
+    <div class="modal-title" id="macc-title">Nuevo acceso</div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">Cliente *</label><select id="macc-cliente"></select></div>
+      <div class="form-row"><label class="form-label">Servicio *</label>
+        <select id="macc-servicio">
+          <option>AFIP / ARCA</option>
+          <option>ARBA</option>
+          <option>APR</option>
+          <option>AGIP</option>
+          <option>Rentas Córdoba</option>
+          <option>Banco</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-row"><label class="form-label">CUIT / Usuario</label><input type="text" id="macc-usuario" placeholder="20-12345678-9"></div>
+      <div class="form-row"><label class="form-label">Contraseña</label><input type="text" id="macc-pass" placeholder="••••••••"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Notas</label><textarea id="macc-notas" placeholder="Observaciones adicionales..."></textarea></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-acceso')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-acceso" onclick="guardarAcceso()">Guardar acceso</button></div>
+  </div>
+</div>
 <div class="modal-bg" id="modal-cliente">
   <div class="modal">
     <div class="modal-title" id="mc-title">Nuevo cliente</div>
@@ -499,7 +544,7 @@ function generarSugs(cliente,mes){
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
-let db={clientes:[],vencimientos:[],cobros:[]};
+let db={clientes:[],vencimientos:[],cobros:[],accesos:[]};
 let currentUser=null,editId=null,vencFiltro='todos',cobrosFiltro='todos';
 let sugsImportar=[],sugsClienteId='';
 
@@ -592,7 +637,11 @@ async function init(){
   }
 
   sb.auth.onAuthStateChange(async(event, session) => {
+    // Ignorar SIGNED_IN si la app ya está mostrándose (evita recargas al volver a la pestaña)
+    const mainApp = document.getElementById('main-app');
+    const isAppVisible = mainApp && mainApp.style.display !== 'none';
     if (event === 'SIGNED_IN' && session) {
+      if (isAppVisible) return; // ya estamos dentro, no recargar
       currentUser = session.user;
       document.getElementById('setup-screen').classList.remove('show');
       showLoading('Cargando datos...');
@@ -616,21 +665,23 @@ function setLoadingMsg(m){document.getElementById('loading-msg').textContent=m;}
 async function loadAll(){
   setLoadingMsg('Cargando datos...');
   try {
-    const [r1, r2, r3] = await withTimeout(Promise.all([
+    const [r1, r2, r3, r4] = await withTimeout(Promise.all([
       sb.from('clientes').select('*').order('nombre'),
       sb.from('vencimientos').select('*').order('fecha'),
-      sb.from('cobros').select('*').order('created_at', {ascending:false})
+      sb.from('cobros').select('*').order('created_at', {ascending:false}),
+      sb.from('accesos').select('*').order('created_at', {ascending:false})
     ]), 12000, 'Tiempo de carga agotado');
     db.clientes  = r1.data || [];
     db.vencimientos = r2.data || [];
     db.cobros    = r3.data || [];
+    db.accesos   = r4.data || [];
   } catch(e) {
     console.error('Error en loadAll:', e);
-    // Mantener datos anteriores si ya había algo cargado
     db.clientes = db.clientes || [];
     db.vencimientos = db.vencimientos || [];
     db.cobros = db.cobros || [];
-    throw e; // re-lanzar para que el caller lo maneje
+    db.accesos = db.accesos || [];
+    throw e;
   }
 }
 
@@ -648,70 +699,23 @@ function showApp(){
 init();
 
 // ═══════════════════════════════════════════
-// VOLVER A LA PESTAÑA — recarga automática
+// VOLVER A LA PESTAÑA
 // ═══════════════════════════════════════════
-let lastHidden = null;
-let reloadInProgress = false;
-
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState === 'hidden') {
-    lastHidden = Date.now();
-    return;
-  }
-
-  if (document.visibilityState === 'visible') {
-    // SIEMPRE limpiar el spinner al volver — pudo haber quedado trabado
-    hideLoading();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  // Solo limpiar spinner si la app ya está visible (no durante carga inicial ni login)
+  const mainApp = document.getElementById('main-app');
+  const isAppVisible = mainApp && mainApp.style.display !== 'none';
+  if (isAppVisible) {
     setSyncing(false);
-
-    if (reloadInProgress) return;
-
-    // Si hay sesión activa y la app está visible, refrescar datos
-    const appVisible = document.getElementById('main-app')?.style.display === 'flex';
-    if (!currentUser || !appVisible) {
-      // No hay sesión o la app no está visible — verificar estado
-      if (!document.getElementById('setup-screen')?.classList.contains('show')) {
-        // Ni login ni app visible: reiniciar limpio
-        init();
-      }
-      return;
-    }
-
-    const ausencia = lastHidden ? Date.now() - lastHidden : 0;
-    if (ausencia < 30000) return; // menos de 30s, no refrescar datos
-
-    reloadInProgress = true;
-    try {
-      setSyncing(true);
-      const { data: { session } } = await withTimeout(sb.auth.getSession(), 8000);
-      if (session) {
-        currentUser = session.user;
-        await loadAll();
-        renderAll();
-        const activeId = document.querySelector('.section.active')?.id?.replace('s-', '');
-        const fn = { clientes:renderClientes, vencimientos:renderVencimientos, cobros:renderCobros, reportes:renderReportes };
-        if (activeId && fn[activeId]) fn[activeId]();
-      } else {
-        currentUser = null;
-        document.getElementById('main-app').style.display = 'none';
-        document.getElementById('setup-screen').classList.add('show');
-        toast('Tu sesión expiró. Ingresá nuevamente.');
-      }
-    } catch(e) {
-      console.log('Error al refrescar al volver:', e);
-      toast('Sin conexión. Los datos pueden no estar actualizados.');
-    } finally {
-      setSyncing(false);
-      reloadInProgress = false;
-    }
   }
 });
 
 // ═══════════════════════════════════════════
 // NAV
 // ═══════════════════════════════════════════
-const PT={inicio:'Inicio',clientes:'Clientes',vencimientos:'Vencimientos',cobros:'Cobros',reportes:'Reportes',afip:'AFIP / Accesos'};
-const PS={inicio:'Resumen del día',clientes:'Cartera de clientes',vencimientos:'Calendario de tareas',cobros:'Honorarios y pagos',reportes:'Análisis',afip:'Calendario oficial + accesos directos'};
+const PT={inicio:'Inicio',clientes:'Clientes',vencimientos:'Vencimientos',cobros:'Cobros',reportes:'Reportes',accesos:'Accesos',afip:'AFIP / Accesos'};
+const PS={inicio:'Resumen del día',clientes:'Cartera de clientes',vencimientos:'Calendario de tareas',cobros:'Honorarios y pagos',reportes:'Análisis',accesos:'Claves y contraseñas por cliente',afip:'Calendario oficial + accesos directos'};
 function nav(page,el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -720,13 +724,14 @@ function nav(page,el){
   document.getElementById('page-title').textContent=PT[page];
   document.getElementById('page-sub').textContent=PS[page];
   renderTopbarActions(page);
-  const fn={inicio:renderDashboard,clientes:renderClientes,vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,afip:renderAfip};
+  const fn={inicio:renderDashboard,clientes:renderClientes,vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,accesos:renderAccesos,afip:renderAfip};
   if(fn[page])fn[page]();
 }
 function renderTopbarActions(page){
   const el=document.getElementById('topbar-actions');
   const map={
     clientes:`<button class="btn btn-primary" onclick="openModalCliente()">+ Nuevo cliente</button>`,
+    accesos:`<button class="btn btn-primary" onclick="openModalAcceso()">+ Nuevo acceso</button>`,
     vencimientos:`<button class="btn btn-afip btn-sm" onclick="nav('afip',document.querySelectorAll('.nav-item')[5])">↗ AFIP</button><button class="btn btn-primary" onclick="openModalVenc()">+ Nueva tarea</button>`,
     cobros:`<button class="btn btn-primary" onclick="openModalCobro()">+ Registrar cobro</button>`,
     inicio:'',reportes:'',afip:''
@@ -764,13 +769,13 @@ function confirm_(title,msg,fn){
   openModal('modal-confirm');
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');editId=null;}
+function closeModal(id){document.getElementById(id).classList.remove('open');setTimeout(()=>{editId=null;},100);}
 document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 
 function populateSelects(){
   const activos=db.clientes.filter(c=>c.estado==='Activo');
   const opts=activos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-  ['mv-cliente','mcob-cliente','afip-import-cliente'].forEach(id=>{
+  ['mv-cliente','mcob-cliente','afip-import-cliente','macc-cliente'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     el.innerHTML=(id==='afip-import-cliente'?'<option value="">— Seleccioná un cliente —</option>':'')+opts;
   });
@@ -1035,6 +1040,162 @@ async function eliminarCobro(id){
   confirm_('Eliminar cobro','¿Eliminar este cobro?',async()=>{
     setSyncing(true);await sb.from('cobros').delete().eq('id',id);setSyncing(false);
     db.cobros=db.cobros.filter(c=>c.id!==id);renderCobros();renderAll();toast('Cobro eliminado');
+  });
+}
+
+// ═══════════════════════════════════════════
+// ACCESOS
+// ═══════════════════════════════════════════
+const SERVICIOS_ICONOS = {
+  'AFIP / ARCA': '#00529B',
+  'ARBA': '#1A6B3C',
+  'APR': '#8B1A1A',
+  'AGIP': '#4A3080',
+  'Rentas Córdoba': '#B05A00',
+  'Banco': '#1A4A7A',
+  'Otro': '#6B6560'
+};
+
+function openModalAcceso(id){
+  editId=id||null;
+  const a=id?db.accesos.find(x=>x.id===id):null;
+  populateSelects();
+  document.getElementById('macc-title').textContent=a?'Editar acceso':'Nuevo acceso';
+  if(a) document.getElementById('macc-cliente').value=a.cliente_id;
+  document.getElementById('macc-servicio').value=a?.servicio||'AFIP / ARCA';
+  document.getElementById('macc-usuario').value=a?.usuario||'';
+  document.getElementById('macc-pass').value=a?.password||'';
+  document.getElementById('macc-notas').value=a?.notas||'';
+  openModal('modal-acceso');
+}
+
+async function guardarAcceso(){
+  const clienteId=document.getElementById('macc-cliente').value;
+  const servicio=document.getElementById('macc-servicio').value;
+  if(!clienteId){toast('Seleccioná un cliente');return;}
+  const btn=document.getElementById('btn-guardar-acceso');btn.disabled=true;
+  setSyncing(true);
+  const data={
+    cliente_id:clienteId,
+    servicio,
+    usuario:document.getElementById('macc-usuario').value.trim(),
+    password:document.getElementById('macc-pass').value,
+    notas:document.getElementById('macc-notas').value.trim(),
+    created_by:currentUser.id
+  };
+  let res;
+  if(editId){res=await sb.from('accesos').update(data).eq('id',editId).select().single();}
+  else{res=await sb.from('accesos').insert(data).select().single();}
+  setSyncing(false);btn.disabled=false;
+  if(res.error){toast('Error: '+res.error.message);return;}
+  if(editId){const i=db.accesos.findIndex(a=>a.id===editId);db.accesos[i]=res.data;}
+  else{db.accesos.push(res.data);}
+  toast(editId?'Acceso actualizado ✓':'Acceso guardado ✓');
+  closeModal('modal-acceso');renderAccesos();
+}
+
+function renderAccesos(){
+  populateSelects();
+  // popular filtro de clientes específico de accesos
+  const selFiltro=document.getElementById('filter-accesos-cliente');
+  if(selFiltro){
+    selFiltro.innerHTML='<option value="">Todos los clientes</option>'+
+      db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  }
+  const q=(document.getElementById('search-accesos')?.value||'').toLowerCase();
+  const fC=document.getElementById('filter-accesos-cliente')?.value||'';
+  let list=db.accesos.filter(a=>{
+    const c=getCliente(a.cliente_id);
+    const match=(c.nombre+a.servicio+a.usuario).toLowerCase().includes(q);
+    return match&&(!fC||a.cliente_id===fC);
+  });
+  // ordenar por cliente y luego servicio
+  list.sort((a,b)=>{
+    const ca=getCliente(a.cliente_id).nombre||'';
+    const cb=getCliente(b.cliente_id).nombre||'';
+    return ca.localeCompare(cb)||a.servicio.localeCompare(b.servicio);
+  });
+  const tb=document.getElementById('tabla-accesos');
+  const em=document.getElementById('empty-accesos');
+  if(!list.length){tb.innerHTML='';em.style.display='block';return;}
+  em.style.display='none';
+  tb.innerHTML=list.map(a=>{
+    const c=getCliente(a.cliente_id);
+    const color=SERVICIOS_ICONOS[a.servicio]||'#6B6560';
+    const passId='pass-'+a.id;
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(c.nombre)}</div>
+        ${c.nombre||'—'}
+      </div></td>
+      <td><span class="badge" style="background:${color}18;color:${color};font-weight:600">${a.servicio}</span></td>
+      <td style="font-family:monospace;font-size:12px;color:var(--text2)">${a.usuario||'—'}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="${passId}" style="font-family:monospace;font-size:13px;letter-spacing:2px">••••••••</span>
+          <button class="action-btn" onclick="togglePass('${passId}','${(a.password||'').replace(/'/g,"\'")}','${a.id}')" title="Mostrar/ocultar">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </td>
+      <td style="color:var(--text3);font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.notas||'—'}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="action-btn" onclick="copiarPass('${(a.password||'').replace(/'/g,"\'")}','${a.servicio}')" title="Copiar contraseña">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+        <button class="action-btn" onclick="openModalAcceso('${a.id}')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="action-btn del" onclick="eliminarAcceso('${a.id}')">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// Ocultar todas las contraseñas visibles al hacer click fuera
+let passVisibles={};
+function togglePass(elId, pass, accId){
+  const el=document.getElementById(elId);
+  if(!el)return;
+  if(passVisibles[accId]){
+    el.textContent='••••••••';
+    el.style.letterSpacing='2px';
+    delete passVisibles[accId];
+  }else{
+    // ocultar cualquier otra visible
+    Object.keys(passVisibles).forEach(id=>{
+      const prev=document.getElementById('pass-'+id);
+      if(prev){prev.textContent='••••••••';prev.style.letterSpacing='2px';}
+    });
+    passVisibles={};
+    el.textContent=pass||'(vacía)';
+    el.style.letterSpacing='normal';
+    passVisibles[accId]=true;
+    // auto-ocultar a los 10s
+    setTimeout(()=>{
+      if(passVisibles[accId]){
+        el.textContent='••••••••';el.style.letterSpacing='2px';
+        delete passVisibles[accId];
+      }
+    },10000);
+  }
+}
+
+function copiarPass(pass, servicio){
+  if(!pass){toast('No hay contraseña guardada');return;}
+  navigator.clipboard.writeText(pass).then(()=>toast(`Contraseña de ${servicio} copiada ✓`)).catch(()=>toast('No se pudo copiar'));
+}
+
+async function eliminarAcceso(id){
+  confirm_('Eliminar acceso','¿Eliminar este acceso? No se puede deshacer.',async()=>{
+    setSyncing(true);
+    await sb.from('accesos').delete().eq('id',id);
+    setSyncing(false);
+    db.accesos=db.accesos.filter(a=>a.id!==id);
+    renderAccesos();
+    toast('Acceso eliminado');
   });
 }
 

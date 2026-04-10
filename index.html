@@ -6,6 +6,7 @@
 <title>Estudio Contable — Panel de Gestión</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg:#F5F3EE;--surface:#FFF;--surface2:#F0EDE6;--border:#E2DDD4;
@@ -231,6 +232,9 @@ textarea{height:80px;resize:vertical}
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Accesos
       </button>
       <div class="nav-sep"></div>
+      <button class="nav-item" onclick="nav('conciliacion',this)" style="color:var(--ok)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>Conciliación
+      </button>
       <button class="nav-item" onclick="nav('afip',this)" style="color:var(--afip)">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>AFIP / Accesos
       </button>
@@ -389,6 +393,144 @@ textarea{height:80px;resize:vertical}
           </div>
         </div>
       </div>
+      <div class="section" id="s-conciliacion">
+        <!-- PASO 1: CARGA -->
+        <div id="conc-paso-carga">
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title">Conciliación de comprobantes</div><div class="card-subtitle">Revisá factura por factura el reporte de AFIP</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;padding:1rem 0">
+              <div>
+                <label class="form-label" style="margin-bottom:8px;display:block">1. Excel de AFIP <span style="color:var(--danger)">*</span></label>
+                <div id="drop-excel" onclick="document.getElementById('input-excel').click()" style="border:2px dashed var(--border);border-radius:var(--radius-lg);padding:1.75rem;cursor:pointer;transition:all .2s;background:var(--bg);text-align:center">
+                  <div style="font-size:32px;margin-bottom:8px">📊</div>
+                  <div style="font-size:13px;font-weight:500;color:var(--text2)" id="excel-label">Hacer clic o arrastrar aquí</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:4px">.xlsx o .xls — Mis Comprobantes / Compras</div>
+                </div>
+                <input type="file" id="input-excel" accept=".xlsx,.xls" style="display:none" onchange="cargarExcelWizard(this)">
+                <div id="excel-load-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+              </div>
+              <div>
+                <label class="form-label" style="margin-bottom:8px;display:block">2. Facturas en PDF <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+                <div id="drop-pdfs-wiz" onclick="document.getElementById('input-pdfs-wiz').click()" style="border:2px dashed var(--border);border-radius:var(--radius-lg);padding:1.75rem;cursor:pointer;transition:all .2s;background:var(--bg);text-align:center">
+                  <div style="font-size:32px;margin-bottom:8px">🧾</div>
+                  <div style="font-size:13px;font-weight:500;color:var(--text2)" id="pdfs-wiz-label">Hacer clic o arrastrar aquí</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:4px">Podés subir varios PDF a la vez</div>
+                </div>
+                <input type="file" id="input-pdfs-wiz" accept=".pdf" multiple style="display:none" onchange="cargarPDFsWizard(this)">
+                <div id="pdfs-wiz-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 2: WIZARD -->
+        <div id="conc-paso-wizard" style="display:none">
+          <div class="card" style="margin-bottom:1rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <div>
+                <div style="font-size:11px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em">Conciliando</div>
+                <div style="font-family:var(--serif);font-size:20px" id="wiz-progreso-label">1 de 15</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span id="wiz-badge-ok" class="badge badge-ok">✅ 0</span>
+                <span id="wiz-badge-prob" class="badge badge-danger">⚠️ 0</span>
+                <span id="wiz-badge-skip" class="badge badge-neutral">⏭ 0</span>
+                <button class="btn btn-sm" onclick="finalizarWizard()">Ver resumen</button>
+                <button class="btn btn-sm" onclick="limpiarConciliacion()">Reiniciar</button>
+              </div>
+            </div>
+            <div style="height:4px;background:var(--surface2);border-radius:2px;margin-top:1rem;overflow:hidden">
+              <div id="wiz-progress-bar" style="height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:0%"></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:1rem">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem">
+              <!-- Visor PDF -->
+              <div id="wiz-pdf-panel">
+                <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Factura PDF</div>
+                <div id="wiz-pdf-container" style="border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                  <div id="wiz-pdf-placeholder" style="text-align:center;color:var(--text3);font-size:12px;padding:1rem">
+                    <div style="font-size:32px;margin-bottom:8px">📄</div>
+                    <div>Sin PDF asociado</div>
+                    <div style="font-size:11px;margin-top:4px">Subí los PDFs en el paso 1</div>
+                  </div>
+                  <iframe id="wiz-pdf-frame" style="display:none;width:100%;height:100%;border:none"></iframe>
+                </div>
+                <div id="wiz-pdf-nombre" style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center"></div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Comprobante AFIP</div>
+                <div class="ficha">
+                  <div><div class="ficha-key">Emisor</div><div class="ficha-val" id="wiz-razon" style="font-size:14px"></div></div>
+                  <div><div class="ficha-key">CUIT</div><div class="ficha-val" id="wiz-cuit" style="font-family:monospace;font-size:13px"></div></div>
+                  <div><div class="ficha-key">Tipo</div><div class="ficha-val" id="wiz-tipo"></div></div>
+                  <div><div class="ficha-key">Comprobante</div><div class="ficha-val" id="wiz-nro" style="font-family:monospace;font-size:13px"></div></div>
+                  <div><div class="ficha-key">Fecha</div><div class="ficha-val" id="wiz-fecha"></div></div>
+                  <div><div class="ficha-key">Moneda</div><div class="ficha-val" id="wiz-moneda"></div></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Importes</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between;padding:7px 12px;background:var(--bg);border-radius:var(--radius)"><span style="font-size:12px;color:var(--text2)">Neto gravado</span><span style="font-weight:500;font-size:13px" id="wiz-neto"></span></div>
+                  <div style="display:flex;justify-content:space-between;padding:7px 12px;background:var(--bg);border-radius:var(--radius)"><span style="font-size:12px;color:var(--text2)">No gravado</span><span style="font-weight:500;font-size:13px" id="wiz-nograv"></span></div>
+                  <div style="display:flex;justify-content:space-between;padding:7px 12px;background:var(--bg);border-radius:var(--radius)"><span style="font-size:12px;color:var(--text2)">Exento</span><span style="font-weight:500;font-size:13px" id="wiz-exento"></span></div>
+                  <div style="display:flex;justify-content:space-between;padding:7px 12px;background:var(--bg);border-radius:var(--radius)"><span style="font-size:12px;color:var(--text2)">IVA</span><span style="font-weight:500;font-size:13px" id="wiz-iva"></span></div>
+                  <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--accent-light);border-radius:var(--radius);border:1px solid var(--accent)">
+                    <span style="font-size:13px;font-weight:600;color:var(--accent)">Total</span>
+                    <span style="font-size:17px;font-weight:700;font-family:var(--serif);color:var(--accent)" id="wiz-total"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="form-row" style="margin-bottom:1.25rem">
+              <label class="form-label">Observación (opcional)</label>
+              <input type="text" id="wiz-obs" placeholder="Ej: número no coincide, diferencia de centavos...">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+              <button class="btn" style="min-width:120px" onclick="wizardAccion('skip')">⏭ Saltear</button>
+              <button class="btn btn-danger" style="min-width:140px" onclick="wizardAccion('problema')">⚠️ Con problema</button>
+              <button class="btn btn-primary" style="min-width:140px" onclick="wizardAccion('ok')">✅ Verificada</button>
+            </div>
+            <div style="text-align:center;margin-top:1rem">
+              <button onclick="wizardNav(-1)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">← Volver a la anterior</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 3: RESUMEN -->
+        <div id="conc-paso-resumen" style="display:none">
+          <div class="stats-grid" id="conc-stats" style="margin-bottom:1rem"></div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Resumen de conciliación</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <button class="tab active" onclick="filtrarConc('todos',this)">Todos</button>
+                <button class="tab" onclick="filtrarConc('ok',this)">✅ Verificadas</button>
+                <button class="tab" onclick="filtrarConc('problema',this)">⚠️ Con problema</button>
+                <button class="tab" onclick="filtrarConc('skip',this)">⏭ Salteadas</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Estado</th><th>Emisor</th><th>Comprobante</th><th>Fecha</th><th>Total</th><th>Observación</th></tr></thead>
+                <tbody id="conc-tabla"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="wizardVolver()">← Seguir revisando</button>
+              <button class="btn" onclick="exportarConciliacion()">⬇ Exportar Excel</button>
+              <button class="btn" onclick="limpiarConciliacion()">Reiniciar</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="section" id="s-accesos">
         <div class="card">
           <div class="card-header">
@@ -524,6 +666,61 @@ textarea{height:80px;resize:vertical}
   </div>
 </div>
 
+<div class="modal-bg" id="modal-import-tarea">
+  <div class="modal" style="width:600px">
+    <div class="modal-title">Importar vencimiento por tarea</div>
+    <div class="form-grid" style="margin-bottom:1rem">
+      <div class="form-row">
+        <label class="form-label">Tipo de tarea *</label>
+        <select id="mit-tipo" onchange="renderImportTareaClientes()">
+          <option value="IVA mensual">IVA mensual — RI</option>
+          <option value="IIBB — Convenio Multilateral">IIBB — Convenio Multilateral</option>
+          <option value="IIBB — Local">IIBB — Local</option>
+          <option value="IIBB — Régimen Simplificado">IIBB — Régimen Simplificado</option>
+          <option value="Monotributo">Monotributo</option>
+          <option value="SICORE — Retención Ganancias">SICORE — Retención Ganancias</option>
+          <option value="SICORE — Percepción Ganancias">SICORE — Percepción Ganancias</option>
+          <option value="Ganancias">Ganancias DDJJ Anual</option>
+          <option value="Bienes Personales">Bienes Personales DDJJ</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Mes *</label>
+        <select id="mit-mes" onchange="renderImportTareaClientes()">
+          <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+          <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+    </div>
+    <div id="mit-info" style="font-size:12px;color:var(--text2);margin-bottom:.75rem;padding:8px 12px;background:var(--bg);border-radius:var(--radius)"></div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Clientes que aplican <span id="mit-count" style="color:var(--accent)"></span></div>
+    <div class="sugs-list" id="mit-clientes" style="max-height:300px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-import-tarea')">Cancelar</button>
+      <button class="btn btn-primary" onclick="ejecutarImportTarea()">Importar a seleccionados</button>
+    </div>
+  </div>
+</div>
+<div id="excel-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;width:700px;max-width:95vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div style="font-family:var(--serif);font-size:18px">Excel parseado (primeras 20 filas)</div>
+      <button onclick="document.getElementById('excel-preview-modal').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">×</button>
+    </div>
+    <div style="margin-bottom:1rem;display:flex;gap:8px">
+      <input type="text" id="excel-search-cuit" placeholder="CUIT a buscar..." style="flex:1;font-size:12px">
+      <input type="text" id="excel-search-nro" placeholder="Nro comprobante..." style="flex:1;font-size:12px">
+      <button class="btn btn-sm" onclick="buscarEnExcel(document.getElementById('excel-search-cuit').value,document.getElementById('excel-search-nro').value)">Buscar</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">CUIT</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">PDV-NRO</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">Fecha</th><th style="text-align:right;padding:6px;border-bottom:1px solid var(--border)">Total</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--border)">Razón Social</th></tr></thead>
+      <tbody id="excel-preview-body"></tbody>
+    </table>
+    <p style="font-size:11px;color:var(--text3);margin-top:1rem">Abrí la consola del navegador (F12) para ver todas las filas.</p>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -843,8 +1040,8 @@ document.addEventListener('visibilitychange', () => {
 // ═══════════════════════════════════════════
 // NAV
 // ═══════════════════════════════════════════
-const PT={inicio:'Inicio',clientes:'Clientes',vencimientos:'Vencimientos',cobros:'Cobros',reportes:'Reportes',accesos:'Accesos',afip:'AFIP / Accesos'};
-const PS={inicio:'Resumen del día',clientes:'Cartera de clientes',vencimientos:'Calendario de tareas',cobros:'Honorarios y pagos',reportes:'Análisis',accesos:'Claves y contraseñas por cliente',afip:'Calendario oficial + accesos directos'};
+const PT={inicio:'Inicio',clientes:'Clientes',vencimientos:'Vencimientos',cobros:'Cobros',reportes:'Reportes',accesos:'Accesos',afip:'AFIP / Accesos',conciliacion:'Conciliación'};
+const PS={inicio:'Resumen del día',clientes:'Cartera de clientes',vencimientos:'Calendario de tareas',cobros:'Honorarios y pagos',reportes:'Análisis',accesos:'Claves y contraseñas por cliente',afip:'Calendario oficial + accesos directos',conciliacion:'Cruzá tus facturas PDF contra el reporte de AFIP'};
 function nav(page,el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -853,7 +1050,7 @@ function nav(page,el){
   document.getElementById('page-title').textContent=PT[page];
   document.getElementById('page-sub').textContent=PS[page];
   renderTopbarActions(page);
-  const fn={inicio:renderDashboard,clientes:renderClientes,vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,accesos:renderAccesos,afip:renderAfip};
+  const fn={inicio:renderDashboard,clientes:renderClientes,vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,accesos:renderAccesos,afip:renderAfip,conciliacion:()=>{}};
   if(fn[page])fn[page]();
 }
 function renderTopbarActions(page){
@@ -861,7 +1058,7 @@ function renderTopbarActions(page){
   const map={
     clientes:`<button class="btn btn-primary" onclick="openModalCliente()">+ Nuevo cliente</button>`,
     accesos:`<button class="btn btn-primary" onclick="openModalAcceso()">+ Nuevo acceso</button>`,
-    vencimientos:`<button class="btn btn-afip btn-sm" onclick="nav('afip',document.querySelectorAll('.nav-item')[5])">↗ AFIP</button><button class="btn btn-primary" onclick="openModalVenc()">+ Nueva tarea</button>`,
+    vencimientos:`<button class="btn btn-afip btn-sm" onclick="nav('afip',document.querySelectorAll('.nav-item')[5])">↗ AFIP</button><button class="btn" onclick="openModalImportTarea()">⚡ Importar por tarea</button><button class="btn btn-primary" onclick="openModalVenc()">+ Nueva tarea</button>`,
     cobros:`<button class="btn btn-primary" onclick="openModalCobro()">+ Registrar cobro</button>`,
     inicio:'',reportes:'',afip:''
   };
@@ -1401,6 +1598,408 @@ async function importarSugeridas(){
   closeModal('modal-import-afip');renderAll();
 }
 function consultarCuit(){const cuit=document.getElementById('cuit-consulta').value.replace(/\D/g,'');if(cuit.length<10){toast('Ingresá un CUIT válido');return;}window.open(`https://sdi.afip.gob.ar/consulta-cuit/resultados?cuit=${cuit}`,'_blank');}
+
+// ═══════════════════════════════════════════
+// CONCILIACIÓN DE COMPROBANTES — WIZARD
+// ═══════════════════════════════════════════
+let wizData=[], wizIdx=0, wizResultados=[], concFiltro='todos', wizPDFs=[];
+
+// ── Funciones de normalización ──────────────────
+function normCuit(s){return String(s||'').replace(/[^0-9]/g,'');}
+function normComp(s){
+  const n=String(s||'').replace(/[^0-9]/g,'');
+  return n.length>=8?n.slice(-8).padStart(8,'0'):n.padStart(8,'0');
+}
+function normImporte(s){
+  if(typeof s==='number')return s;
+  let v=String(s||'').replace(/\s/g,'').replace(/[$]/g,'').trim();
+  if(!v||v==='-')return 0;
+  if(/\d,\d{1,2}$/.test(v)){v=v.replace(/\./g,'').replace(',','.');}
+  else if(/\d\.\d{2}$/.test(v)&&v.indexOf(',')===-1){/* ok */}
+  else{v=v.replace(/\./g,'').replace(',','.');}
+  return parseFloat(v)||0;
+}
+function normNombre(s){
+  let n=String(s||'').toUpperCase().trim();
+  n=n.replace(/(S\.?R\.?L\.?|S\.?A\.?S\.?|S\.?A|SRL|SAS|SA|S\.C\.)\s*\.?\s*$/,'');
+  n=n.replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  return n;
+}
+function nombreMatch(a,b){
+  const na=normNombre(a),nb=normNombre(b);
+  if(!na||!nb)return false;
+  if(na===nb)return true;
+  if(na.includes(nb)||nb.includes(na))return true;
+  const wa=na.split(' ')[0],wb=nb.split(' ')[0];
+  if(wa&&wb&&wa===wb&&wa.length>3)return true;
+  return false;
+}
+
+function normalizeExcelRow(row){
+  const get=k=>row[k]??row[k.trim()]??'';
+  const pdv=String(get('Punto de Venta')||'').trim().padStart(4,'0');
+  const nroD=String(get('Número Desde')||get('Numero Desde')||'').trim();
+  const nroH=String(get('Número Hasta')||get('Numero Hasta')||'').trim();
+  const nroComp=normComp(nroD||nroH);
+  const nroFull=pdv+'-'+nroComp;
+  return{
+    cuit:  normCuit(get('Nro. Doc. Vendedor')||get('Nro Doc Vendedor')),
+    nro:   nroComp,
+    nroFull,
+    pdv,
+    fecha: String(get('Fecha')||'').trim(),
+    tipo:  String(get('Tipo')||'').trim(),
+    razon: String(get('Denominación Vendedor')||get('Denominacion Vendedor')||'').trim(),
+    neto:  normImporte(get('Neto Gravado')),
+    iva:   normImporte(get('IVA')),
+    importe: normImporte(get('Total')),
+    noGrav:normImporte(get('No Gravado')),
+    exento:normImporte(get('Exento')),
+    moneda:String(get('Moneda')||'PES').trim(),
+    cae:   '',
+  };
+}
+
+function cargarExcelWizard(input){
+  const file=input.files[0];
+  if(!file)return;
+  const statusEl=document.getElementById('excel-load-status');
+  statusEl.textContent='Procesando...';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      wizData=rows.map(normalizeExcelRow).filter(r=>r.razon||r.cuit||r.importe);
+      wizResultados=wizData.map(r=>({...r,estado:'pendiente',obs:''}));
+      document.getElementById('excel-label').textContent=`✅ ${file.name}`;
+      document.getElementById('drop-excel').style.borderColor='var(--ok)';
+      document.getElementById('drop-excel').style.background='var(--ok-light)';
+      statusEl.innerHTML=`<span style="color:var(--ok)">✅ ${wizData.length} comprobantes cargados</span> — <button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="iniciarWizard()">Iniciar revisión →</button>`;
+    }catch(err){statusEl.textContent='Error al leer el Excel: '+err.message;}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function cargarPDFsWizard(input){
+  const files=Array.from(input.files);
+  if(!files.length)return;
+  // Store files with object URLs for viewing
+  wizPDFs=files.map(f=>({
+    file:f,
+    name:f.name,
+    url:URL.createObjectURL(f),
+    // Extract clues from filename: CUIT, PDV, NRO
+    cuit:normCuit((f.name.match(/(\d{2}[-_]\d{8}[-_]\d)/)||[])[1]||''),
+    nro:normComp((f.name.match(/(\d{6,8})/)||[])[1]||''),
+  }));
+  document.getElementById('pdfs-wiz-label').textContent=`✅ ${files.length} PDF${files.length>1?'s':''} cargado${files.length>1?'s':''}`;
+  document.getElementById('drop-pdfs-wiz').style.borderColor='var(--ok)';
+  document.getElementById('drop-pdfs-wiz').style.background='var(--ok-light)';
+  document.getElementById('pdfs-wiz-status').textContent=files.map(f=>f.name).join(', ').slice(0,80)+(files.length>3?'...':'');
+}
+
+// Find best matching PDF for current excel row
+function encontrarPDF(row){
+  if(!wizPDFs.length)return null;
+  // Match by NRO in filename
+  let match=wizPDFs.find(p=>p.nro&&p.nro===row.nro&&p.nro!=='00000000');
+  // Match by CUIT in filename
+  if(!match&&row.cuit)match=wizPDFs.find(p=>p.cuit&&p.cuit===row.cuit);
+  // Fallback: try matching by position (same index)
+  if(!match&&wizPDFs[wizIdx])match=wizPDFs[wizIdx];
+  return match||null;
+}
+
+function mostrarPDF(row){
+  const pdf=encontrarPDF(row);
+  const frame=document.getElementById('wiz-pdf-frame');
+  const placeholder=document.getElementById('wiz-pdf-placeholder');
+  const nombre=document.getElementById('wiz-pdf-nombre');
+  if(pdf){
+    frame.src=pdf.url;
+    frame.style.display='block';
+    placeholder.style.display='none';
+    nombre.textContent=pdf.name;
+  } else {
+    frame.src='';
+    frame.style.display='none';
+    placeholder.style.display='flex';
+    placeholder.style.flexDirection='column';
+    placeholder.style.alignItems='center';
+    nombre.textContent='';
+  }
+}
+
+function iniciarWizard(){
+  wizIdx=0;
+  document.getElementById('conc-paso-carga').style.display='none';
+  document.getElementById('conc-paso-wizard').style.display='block';
+  document.getElementById('conc-paso-resumen').style.display='none';
+  mostrarWizCard();
+}
+
+function mostrarWizCard(){
+  const r=wizData[wizIdx];
+  if(!r)return;
+  const res=wizResultados[wizIdx];
+  const total=wizData.length;
+
+  // Progreso
+  document.getElementById('wiz-progreso-label').textContent=`${wizIdx+1} de ${total}`;
+  document.getElementById('wiz-progress-bar').style.width=`${Math.round((wizIdx/total)*100)}%`;
+
+  // Badges
+  const ok=wizResultados.filter(x=>x.estado==='ok').length;
+  const prob=wizResultados.filter(x=>x.estado==='problema').length;
+  const skip=wizResultados.filter(x=>x.estado==='skip').length;
+  document.getElementById('wiz-badge-ok').textContent=`✅ ${ok}`;
+  document.getElementById('wiz-badge-prob').textContent=`⚠️ ${prob}`;
+  document.getElementById('wiz-badge-skip').textContent=`⏭ ${skip}`;
+
+  // Datos de la factura
+  document.getElementById('wiz-razon').textContent=r.razon||'—';
+  document.getElementById('wiz-cuit').textContent=r.cuit||'—';
+  document.getElementById('wiz-tipo').textContent=r.tipo||'—';
+  document.getElementById('wiz-nro').textContent=`${r.pdv}-${r.nro}`;
+  document.getElementById('wiz-fecha').textContent=r.fecha||'—';
+  document.getElementById('wiz-moneda').textContent=r.moneda||'ARS';
+  document.getElementById('wiz-neto').textContent=r.neto?fmt$(r.neto):'—';
+  document.getElementById('wiz-nograv').textContent=r.noGrav?fmt$(r.noGrav):'—';
+  document.getElementById('wiz-exento').textContent=r.exento?fmt$(r.exento):'—';
+  document.getElementById('wiz-iva').textContent=r.iva?fmt$(r.iva):'—';
+  document.getElementById('wiz-total').textContent=r.importe?fmt$(r.importe):'—';
+
+  // Restaurar obs si ya tenía
+  document.getElementById('wiz-obs').value=res.obs||'';
+  // Mostrar PDF asociado
+  mostrarPDF(r);
+
+  // Color de fondo del card según estado previo
+  const card=document.getElementById('wiz-card');
+  card.style.borderColor=res.estado==='ok'?'var(--ok)':res.estado==='problema'?'var(--danger)':'var(--border)';
+  card.style.background=res.estado==='ok'?'var(--ok-light)':res.estado==='problema'?'var(--danger-light)':'var(--surface)';
+}
+
+function wizardAccion(accion){
+  wizResultados[wizIdx].estado=accion;
+  wizResultados[wizIdx].obs=document.getElementById('wiz-obs').value.trim();
+  if(wizIdx<wizData.length-1){
+    wizIdx++;
+    mostrarWizCard();
+    document.getElementById('wiz-obs').value='';
+  } else {
+    finalizarWizard();
+  }
+}
+
+function wizardNav(dir){
+  const newIdx=wizIdx+dir;
+  if(newIdx<0||newIdx>=wizData.length)return;
+  // Guardar obs actual
+  wizResultados[wizIdx].obs=document.getElementById('wiz-obs').value.trim();
+  wizIdx=newIdx;
+  mostrarWizCard();
+}
+
+function finalizarWizard(){
+  document.getElementById('conc-paso-wizard').style.display='none';
+  document.getElementById('conc-paso-resumen').style.display='block';
+  renderResumen();
+}
+
+function wizardVolver(){
+  document.getElementById('conc-paso-resumen').style.display='none';
+  document.getElementById('conc-paso-wizard').style.display='block';
+  mostrarWizCard();
+}
+
+function filtrarConc(f,el){
+  concFiltro=f;
+  document.querySelectorAll('#conc-paso-resumen .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderResumen();
+}
+
+function renderResumen(){
+  const ok=wizResultados.filter(r=>r.estado==='ok').length;
+  const prob=wizResultados.filter(r=>r.estado==='problema').length;
+  const skip=wizResultados.filter(r=>r.estado==='skip').length;
+  const pend=wizResultados.filter(r=>r.estado==='pendiente').length;
+  document.getElementById('conc-stats').innerHTML=`
+    <div class="stat-card stat-ok"><div class="stat-label">Verificadas</div><div class="stat-value">${ok}</div><div class="stat-sub">Sin observaciones</div></div>
+    <div class="stat-card ${prob?'stat-danger':''}"><div class="stat-label">Con problema</div><div class="stat-value">${prob}</div><div class="stat-sub">Requieren atención</div></div>
+    <div class="stat-card"><div class="stat-label">Salteadas</div><div class="stat-value">${skip}</div><div class="stat-sub">Para revisar después</div></div>
+    <div class="stat-card ${pend?'stat-warn':''}"><div class="stat-label">Pendientes</div><div class="stat-value">${pend}</div><div class="stat-sub">Sin revisar aún</div></div>
+  `;
+
+  const estadoBadge={
+    ok:'<span class="badge badge-ok">✅ Verificada</span>',
+    problema:'<span class="badge badge-danger">⚠️ Problema</span>',
+    skip:'<span class="badge badge-neutral">⏭ Salteada</span>',
+    pendiente:'<span class="badge badge-warn">⏳ Pendiente</span>'
+  };
+
+  const lista=concFiltro==='todos'?wizResultados:wizResultados.filter(r=>r.estado===concFiltro);
+  const tb=document.getElementById('conc-tabla');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</td></tr>';return;}
+  tb.innerHTML=lista.map((r,i)=>{
+    const globalIdx=wizResultados.indexOf(r);
+    return`<tr style="cursor:pointer" onclick="wizIdx=${globalIdx};wizardVolver()">
+      <td>${estadoBadge[r.estado]||''}</td>
+      <td style="font-weight:500;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.razon||'—'}</td>
+      <td style="font-family:monospace;font-size:12px">${r.pdv}-${r.nro}</td>
+      <td style="font-size:12px">${r.fecha||'—'}</td>
+      <td style="font-weight:600">${r.importe?fmt$(r.importe):'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${r.obs||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportarConciliacion(){
+  const ws=XLSX.utils.json_to_sheet(wizResultados.map(r=>({
+    'Estado':r.estado==='ok'?'Verificada':r.estado==='problema'?'Con problema':r.estado==='skip'?'Salteada':'Pendiente',
+    'Emisor':r.razon||'',
+    'CUIT':r.cuit||'',
+    'Tipo':r.tipo||'',
+    'Punto de Venta':r.pdv||'',
+    'Número':r.nro||'',
+    'Fecha':r.fecha||'',
+    'Neto Gravado':r.neto||0,
+    'IVA':r.iva||0,
+    'Total':r.importe||0,
+    'Moneda':r.moneda||'ARS',
+    'Observación':r.obs||''
+  })));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Conciliación');
+  XLSX.writeFile(wb,'conciliacion_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function limpiarConciliacion(){
+  wizData=[];wizResultados=[];wizIdx=0;
+  document.getElementById('conc-paso-carga').style.display='block';
+  document.getElementById('conc-paso-wizard').style.display='none';
+  document.getElementById('conc-paso-resumen').style.display='none';
+  document.getElementById('excel-label').textContent='Hacer clic o arrastrar el Excel aquí';
+  document.getElementById('drop-excel').style.borderColor='';
+  document.getElementById('drop-excel').style.background='';
+  document.getElementById('excel-load-status').textContent='';
+  document.getElementById('input-excel').value='';
+  wizPDFs.forEach(p=>URL.revokeObjectURL(p.url));
+  wizPDFs=[];
+  if(document.getElementById('input-pdfs-wiz'))document.getElementById('input-pdfs-wiz').value='';
+}
+
+// ═══════════════════════════════════════════
+// IMPORTAR POR TAREA// ═══════════════════════════════════════════
+// IMPORTAR POR TAREA
+// ═══════════════════════════════════════════
+// Mapea tipo de tarea → qué clientes aplican y qué calendario usar
+const TAREA_CONFIG={
+  'IVA mensual':          {afipKey:'IVA_RI',   org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto'},
+  'IIBB — Convenio Multilateral': {afipKey:'IIBB', org:'ARBA', filtro:c=>c.iibb_regimen==='cm'},
+  'IIBB — Local':         {afipKey:'IIBB',     org:'ARBA', filtro:c=>c.iibb_regimen==='local'},
+  'IIBB — Régimen Simplificado':  {afipKey:'IIBB', org:'ARBA', filtro:c=>c.iibb_regimen==='simplificado'},
+  'Monotributo':          {afipKey:'MONO',     org:'ARCA', filtro:c=>c.categoria==='Monotributo'},
+  'SICORE — Retención Ganancias': {afipKey:'SICORE',org:'ARCA', filtro:c=>!!(c.agente_retencion)},
+  'SICORE — Percepción Ganancias':{afipKey:'SICORE',org:'ARCA', filtro:c=>!!(c.agente_percepcion_ganancias)},
+  'Ganancias':            {afipKey:'GANANCIAS',org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6},
+  'Bienes Personales':    {afipKey:'BIENES',   org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6},
+};
+
+function openModalImportTarea(){
+  // Set default mes to current month
+  const mesEl=document.getElementById('mit-mes');
+  mesEl.value=String(new Date().getMonth()+1);
+  renderImportTareaClientes();
+  openModal('modal-import-tarea');
+}
+
+function renderImportTareaClientes(){
+  const tipo=document.getElementById('mit-tipo').value;
+  const mes=parseInt(document.getElementById('mit-mes').value);
+  const cfg=TAREA_CONFIG[tipo];
+  if(!cfg){document.getElementById('mit-clientes').innerHTML='';return;}
+
+  // Warn if tarea only applies to specific month
+  const infoEl=document.getElementById('mit-info');
+  if(cfg.soloMes&&mes!==cfg.soloMes){
+    infoEl.innerHTML=`⚠️ Esta tarea solo tiene vencimiento en <strong>${MESES[cfg.soloMes]}</strong>. Cambiá el mes para ver clientes.`;
+    document.getElementById('mit-clientes').innerHTML='<div class="empty" style="padding:1rem"><p>Sin vencimientos para este mes</p></div>';
+    document.getElementById('mit-count').textContent='';
+    return;
+  }
+  infoEl.innerHTML='';
+
+  // Filter clients that apply
+  const candidatos=db.clientes.filter(c=>c.estado==='Activo'&&cfg.filtro(c));
+
+  // Build rows with fecha and "ya existe" check
+  const rows=candidatos.map(c=>{
+    const t=termCuit(c.cuit||'');
+    const fecha=t!==null?getAfip(cfg.afipKey,mes,t):null;
+    const existe=fecha&&db.vencimientos.some(v=>v.cliente_id===c.id&&v.tipo===tipo&&v.fecha===fecha);
+    return{c,t,fecha,existe};
+  }).filter(r=>r.fecha); // solo los que tienen fecha (CUIT completo)
+
+  document.getElementById('mit-count').textContent=`(${rows.length})`;
+
+  if(!rows.length){
+    document.getElementById('mit-clientes').innerHTML='<div class="empty" style="padding:1rem"><p>No hay clientes activos que apliquen para esta tarea.</p></div>';
+    return;
+  }
+
+  document.getElementById('mit-clientes').innerHTML=rows.map((r,i)=>{
+    const {c,fecha,existe}=r;
+    return`<div class="sug-item" style="${existe?'opacity:.55':''}">
+      <label style="flex:1;display:flex;align-items:center;gap:8px;cursor:${existe?'default':'pointer'}">
+        <input type="checkbox" id="mit-cb-${i}" ${existe?'disabled':'checked'} style="width:auto">
+        <div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${initials(c.nombre)}</div>
+        <div>
+          <div style="font-weight:500;font-size:13px">${c.nombre}</div>
+          <div style="font-size:11px;color:var(--text3)">CUIT ${c.cuit||'—'} · Vence: ${fmtDate(fecha)} ${existe?'· <span style="color:var(--ok)">Ya cargado</span>':''}</div>
+        </div>
+      </label>
+      <span class="badge ${existe?'badge-ok':'badge-neutral'}" style="font-size:10px">${existe?'Ya existe':'Pendiente'}</span>
+    </div>`;
+  }).join('');
+}
+
+async function ejecutarImportTarea(){
+  const tipo=document.getElementById('mit-tipo').value;
+  const mes=parseInt(document.getElementById('mit-mes').value);
+  const cfg=TAREA_CONFIG[tipo];
+  if(!cfg)return;
+
+  const candidatos=db.clientes.filter(c=>c.estado==='Activo'&&cfg.filtro(c));
+  const nuevos=[];
+
+  candidatos.forEach((c,i)=>{
+    const cb=document.getElementById(`mit-cb-${i}`);
+    if(!cb||cb.disabled||!cb.checked)return;
+    const t=termCuit(c.cuit||'');
+    const fecha=t!==null?getAfip(cfg.afipKey,mes,t):null;
+    if(!fecha)return;
+    const existe=db.vencimientos.some(v=>v.cliente_id===c.id&&v.tipo===tipo&&v.fecha===fecha);
+    if(existe)return;
+    nuevos.push({cliente_id:c.id,tipo,fecha,estado:'pendiente',responsable:'',notas:`Importado en lote — ${MESES[mes]} 2026`,origen:'afip',created_by:currentUser.id});
+  });
+
+  if(!nuevos.length){toast('No hay vencimientos nuevos para importar');return;}
+
+  setSyncing(true);
+  const res=await sb.from('vencimientos').insert(nuevos).select();
+  setSyncing(false);
+
+  if(res.error){toast('Error: '+res.error.message);return;}
+  db.vencimientos.push(...res.data);
+  toast(`${res.data.length} vencimiento${res.data.length>1?'s':''} importado${res.data.length>1?'s':''} ✓`);
+  closeModal('modal-import-tarea');
+  renderVencimientos();
+  renderAll();
+}
 
 // ═══════════════════════════════════════════
 // CALENDARIO INICIO

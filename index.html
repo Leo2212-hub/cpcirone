@@ -422,6 +422,10 @@ textarea{height:80px;resize:vertical}
                 <div id="pdfs-wiz-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
               </div>
             </div>
+            <div style="text-align:center;margin-top:1.5rem">
+              <button class="btn btn-primary" id="btn-iniciar-wizard" onclick="iniciarWizard()" disabled style="min-width:200px;justify-content:center">Iniciar revisión →</button>
+              <div style="font-size:11px;color:var(--text3);margin-top:8px">Necesitás subir el Excel y al menos un PDF</div>
+            </div>
           </div>
         </div>
 
@@ -462,7 +466,10 @@ textarea{height:80px;resize:vertical}
                 <div id="wiz-pdf-nombre" style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center"></div>
               </div>
               <div>
-                <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Comprobante AFIP</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+                  <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Fila en Excel AFIP</div>
+                  <div id="wiz-match-status"></div>
+                </div>
                 <div class="ficha">
                   <div><div class="ficha-key">Emisor</div><div class="ficha-val" id="wiz-razon" style="font-size:14px"></div></div>
                   <div><div class="ficha-key">CUIT</div><div class="ficha-val" id="wiz-cuit" style="font-family:monospace;font-size:13px"></div></div>
@@ -489,12 +496,20 @@ textarea{height:80px;resize:vertical}
           </div>
 
           <div class="card">
+            <div class="form-row" style="margin-bottom:1rem">
+              <label class="form-label">Elegir fila del Excel</label>
+              <div style="position:relative;margin-bottom:6px">
+                <input type="text" id="wiz-excel-search" placeholder="Buscar por emisor, CUIT o número..." oninput="filtrarListadoExcel()" style="font-size:12px;padding-left:30px">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3)"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              </div>
+              <div id="wiz-excel-listado" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg)"></div>
+            </div>
             <div class="form-row" style="margin-bottom:1.25rem">
               <label class="form-label">Observación (opcional)</label>
               <input type="text" id="wiz-obs" placeholder="Ej: número no coincide, diferencia de centavos...">
             </div>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-              <button class="btn" style="min-width:120px" onclick="wizardAccion('skip')">⏭ Saltear</button>
+              <button class="btn" style="min-width:140px" onclick="wizardAccion('no-encontrada')">❌ No encontrada</button>
               <button class="btn btn-danger" style="min-width:140px" onclick="wizardAccion('problema')">⚠️ Con problema</button>
               <button class="btn btn-primary" style="min-width:140px" onclick="wizardAccion('ok')">✅ Verificada</button>
             </div>
@@ -514,7 +529,7 @@ textarea{height:80px;resize:vertical}
                 <button class="tab active" onclick="filtrarConc('todos',this)">Todos</button>
                 <button class="tab" onclick="filtrarConc('ok',this)">✅ Verificadas</button>
                 <button class="tab" onclick="filtrarConc('problema',this)">⚠️ Con problema</button>
-                <button class="tab" onclick="filtrarConc('skip',this)">⏭ Salteadas</button>
+                <button class="tab" onclick="filtrarConc('no-encontrada',this)">❌ No encontradas</button>
               </div>
             </div>
             <div class="table-wrap">
@@ -1600,28 +1615,22 @@ async function importarSugeridas(){
 function consultarCuit(){const cuit=document.getElementById('cuit-consulta').value.replace(/\D/g,'');if(cuit.length<10){toast('Ingresá un CUIT válido');return;}window.open(`https://sdi.afip.gob.ar/consulta-cuit/resultados?cuit=${cuit}`,'_blank');}
 
 // ═══════════════════════════════════════════
-// CONCILIACIÓN DE COMPROBANTES — WIZARD
+// FUNCIONES DE NORMALIZACIÓN
 // ═══════════════════════════════════════════
-let wizData=[], wizIdx=0, wizResultados=[], concFiltro='todos', wizPDFs=[];
-
-// ── Funciones de normalización ──────────────────
 function normCuit(s){return String(s||'').replace(/[^0-9]/g,'');}
-function normComp(s){
-  const n=String(s||'').replace(/[^0-9]/g,'');
-  return n.length>=8?n.slice(-8).padStart(8,'0'):n.padStart(8,'0');
-}
+function normComp(s){const n=String(s||'').replace(/[^0-9]/g,'');return n.length>=8?n.slice(-8).padStart(8,'0'):n.padStart(8,'0');}
 function normImporte(s){
   if(typeof s==='number')return s;
   let v=String(s||'').replace(/\s/g,'').replace(/[$]/g,'').trim();
   if(!v||v==='-')return 0;
   if(/\d,\d{1,2}$/.test(v)){v=v.replace(/\./g,'').replace(',','.');}
-  else if(/\d\.\d{2}$/.test(v)&&v.indexOf(',')===-1){/* ok */}
+  else if(/\d\.\d{2}$/.test(v)&&v.indexOf(',')===-1){/* punto decimal */}
   else{v=v.replace(/\./g,'').replace(',','.');}
   return parseFloat(v)||0;
 }
 function normNombre(s){
   let n=String(s||'').toUpperCase().trim();
-  n=n.replace(/(S\.?R\.?L\.?|S\.?A\.?S\.?|S\.?A|SRL|SAS|SA|S\.C\.)\s*\.?\s*$/,'');
+  n=n.replace(/(S\.?R\.?L\.?|S\.?A\.?S\.?|S\.?A|SRL|SAS|SA)\s*\.?\s*$/,'');
   n=n.replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
   return n;
 }
@@ -1631,35 +1640,37 @@ function nombreMatch(a,b){
   if(na===nb)return true;
   if(na.includes(nb)||nb.includes(na))return true;
   const wa=na.split(' ')[0],wb=nb.split(' ')[0];
-  if(wa&&wb&&wa===wb&&wa.length>3)return true;
-  return false;
+  return wa&&wb&&wa===wb&&wa.length>3;
 }
-
 function normalizeExcelRow(row){
   const get=k=>row[k]??row[k.trim()]??'';
   const pdv=String(get('Punto de Venta')||'').trim().padStart(4,'0');
   const nroD=String(get('Número Desde')||get('Numero Desde')||'').trim();
   const nroH=String(get('Número Hasta')||get('Numero Hasta')||'').trim();
   const nroComp=normComp(nroD||nroH);
-  const nroFull=pdv+'-'+nroComp;
   return{
     cuit:  normCuit(get('Nro. Doc. Vendedor')||get('Nro Doc Vendedor')),
     nro:   nroComp,
-    nroFull,
+    nroFull:pdv+'-'+nroComp,
     pdv,
     fecha: String(get('Fecha')||'').trim(),
     tipo:  String(get('Tipo')||'').trim(),
     razon: String(get('Denominación Vendedor')||get('Denominacion Vendedor')||'').trim(),
     neto:  normImporte(get('Neto Gravado')),
     iva:   normImporte(get('IVA')),
-    importe: normImporte(get('Total')),
+    importe:normImporte(get('Total')),
     noGrav:normImporte(get('No Gravado')),
     exento:normImporte(get('Exento')),
     moneda:String(get('Moneda')||'PES').trim(),
-    cae:   '',
   };
 }
 
+// ═══════════════════════════════════════════
+// CONCILIACIÓN DE COMPROBANTES — WIZARD
+// ═══════════════════════════════════════════
+let wizPDFs=[], wizExcel=[], wizIdx=0, wizResultados=[], concFiltro='todos';
+
+// ── Carga Excel ──────────────────────────────
 function cargarExcelWizard(input){
   const file=input.files[0];
   if(!file)return;
@@ -1671,121 +1682,194 @@ function cargarExcelWizard(input){
       const wb=XLSX.read(e.target.result,{type:'array'});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      wizData=rows.map(normalizeExcelRow).filter(r=>r.razon||r.cuit||r.importe);
-      wizResultados=wizData.map(r=>({...r,estado:'pendiente',obs:''}));
+      wizExcel=rows.map(normalizeExcelRow).filter(r=>r.razon||r.cuit||r.importe);
       document.getElementById('excel-label').textContent=`✅ ${file.name}`;
       document.getElementById('drop-excel').style.borderColor='var(--ok)';
       document.getElementById('drop-excel').style.background='var(--ok-light)';
-      statusEl.innerHTML=`<span style="color:var(--ok)">✅ ${wizData.length} comprobantes cargados</span> — <button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="iniciarWizard()">Iniciar revisión →</button>`;
-    }catch(err){statusEl.textContent='Error al leer el Excel: '+err.message;}
+      statusEl.innerHTML=`<span style="color:var(--ok)">✅ ${wizExcel.length} filas cargadas</span>`;
+      checkWizardReady();
+    }catch(err){statusEl.textContent='Error: '+err.message;}
   };
   reader.readAsArrayBuffer(file);
 }
 
+// ── Carga PDFs ───────────────────────────────
 function cargarPDFsWizard(input){
   const files=Array.from(input.files);
   if(!files.length)return;
-  // Store files with object URLs for viewing
   wizPDFs=files.map(f=>({
-    file:f,
-    name:f.name,
+    file:f, name:f.name,
     url:URL.createObjectURL(f),
-    // Extract clues from filename: CUIT, PDV, NRO
-    cuit:normCuit((f.name.match(/(\d{2}[-_]\d{8}[-_]\d)/)||[])[1]||''),
-    nro:normComp((f.name.match(/(\d{6,8})/)||[])[1]||''),
+    // Extraer CUIT y NRO del nombre del archivo
+    cuitNombre:normCuit((f.name.match(/\d{2}[-_]\d{8}[-_]\d/)||[])[0]||''),
+    nroNombre: normComp((f.name.match(/(\d{6,8})(?=\D|$)/g)||[]).slice(-1)[0]||''),
   }));
   document.getElementById('pdfs-wiz-label').textContent=`✅ ${files.length} PDF${files.length>1?'s':''} cargado${files.length>1?'s':''}`;
   document.getElementById('drop-pdfs-wiz').style.borderColor='var(--ok)';
   document.getElementById('drop-pdfs-wiz').style.background='var(--ok-light)';
-  document.getElementById('pdfs-wiz-status').textContent=files.map(f=>f.name).join(', ').slice(0,80)+(files.length>3?'...':'');
+  document.getElementById('pdfs-wiz-status').textContent=`${files.length} archivo${files.length>1?'s':''}`;
+  checkWizardReady();
 }
 
-// Find best matching PDF for current excel row
-function encontrarPDF(row){
-  if(!wizPDFs.length)return null;
-  // Match by NRO in filename
-  let match=wizPDFs.find(p=>p.nro&&p.nro===row.nro&&p.nro!=='00000000');
-  // Match by CUIT in filename
-  if(!match&&row.cuit)match=wizPDFs.find(p=>p.cuit&&p.cuit===row.cuit);
-  // Fallback: try matching by position (same index)
-  if(!match&&wizPDFs[wizIdx])match=wizPDFs[wizIdx];
-  return match||null;
-}
-
-function mostrarPDF(row){
-  const pdf=encontrarPDF(row);
-  const frame=document.getElementById('wiz-pdf-frame');
-  const placeholder=document.getElementById('wiz-pdf-placeholder');
-  const nombre=document.getElementById('wiz-pdf-nombre');
-  if(pdf){
-    frame.src=pdf.url;
-    frame.style.display='block';
-    placeholder.style.display='none';
-    nombre.textContent=pdf.name;
-  } else {
-    frame.src='';
-    frame.style.display='none';
-    placeholder.style.display='flex';
-    placeholder.style.flexDirection='column';
-    placeholder.style.alignItems='center';
-    nombre.textContent='';
+function checkWizardReady(){
+  const btn=document.getElementById('btn-iniciar-wizard');
+  if(btn) btn.disabled=!(wizPDFs.length>0&&wizExcel.length>0);
+  if(wizPDFs.length>0&&wizExcel.length>0&&btn){
+    btn.style.display='inline-flex';
   }
 }
 
+// ── Buscar candidata en Excel para un PDF ────
+function buscarCandidataExcel(pdf){
+  if(!wizExcel.length)return null;
+  // 1. Por NRO en nombre de archivo
+  if(pdf.nroNombre&&pdf.nroNombre!=='00000000'){
+    const m=wizExcel.find(r=>r.nro===pdf.nroNombre);
+    if(m)return{row:m,score:3,razon:'Número de comprobante en nombre de archivo'};
+  }
+  // 2. Por CUIT en nombre de archivo
+  if(pdf.cuitNombre){
+    const matches=wizExcel.filter(r=>r.cuit===pdf.cuitNombre);
+    if(matches.length===1)return{row:matches[0],score:2,razon:'CUIT en nombre de archivo'};
+    if(matches.length>1)return{row:matches[0],score:1,razon:`CUIT en nombre de archivo (${matches.length} candidatas)`};
+  }
+  return null;
+}
+
+// ── Iniciar wizard ───────────────────────────
 function iniciarWizard(){
   wizIdx=0;
+  wizResultados=wizPDFs.map(p=>{
+    const candidata=buscarCandidataExcel(p);
+    return{pdf:p, excelRow:candidata?candidata.row:null, razonMatch:candidata?candidata.razon:null, estado:'pendiente', obs:''};
+  });
   document.getElementById('conc-paso-carga').style.display='none';
   document.getElementById('conc-paso-wizard').style.display='block';
   document.getElementById('conc-paso-resumen').style.display='none';
   mostrarWizCard();
 }
 
+// ── Mostrar tarjeta actual ───────────────────
 function mostrarWizCard(){
-  const r=wizData[wizIdx];
-  if(!r)return;
   const res=wizResultados[wizIdx];
-  const total=wizData.length;
+  const pdf=res.pdf;
+  const row=res.excelRow;
+  const total=wizPDFs.length;
 
   // Progreso
   document.getElementById('wiz-progreso-label').textContent=`${wizIdx+1} de ${total}`;
-  document.getElementById('wiz-progress-bar').style.width=`${Math.round((wizIdx/total)*100)}%`;
+  const pct=Math.round((wizIdx/total)*100);
+  document.getElementById('wiz-progress-bar').style.width=pct+'%';
 
   // Badges
   const ok=wizResultados.filter(x=>x.estado==='ok').length;
   const prob=wizResultados.filter(x=>x.estado==='problema').length;
-  const skip=wizResultados.filter(x=>x.estado==='skip').length;
+  const skip=wizResultados.filter(x=>x.estado==='no-encontrada').length;
   document.getElementById('wiz-badge-ok').textContent=`✅ ${ok}`;
   document.getElementById('wiz-badge-prob').textContent=`⚠️ ${prob}`;
-  document.getElementById('wiz-badge-skip').textContent=`⏭ ${skip}`;
+  document.getElementById('wiz-badge-skip').textContent=`❌ ${skip}`;
 
-  // Datos de la factura
-  document.getElementById('wiz-razon').textContent=r.razon||'—';
-  document.getElementById('wiz-cuit').textContent=r.cuit||'—';
-  document.getElementById('wiz-tipo').textContent=r.tipo||'—';
-  document.getElementById('wiz-nro').textContent=`${r.pdv}-${r.nro}`;
-  document.getElementById('wiz-fecha').textContent=r.fecha||'—';
-  document.getElementById('wiz-moneda').textContent=r.moneda||'ARS';
-  document.getElementById('wiz-neto').textContent=r.neto?fmt$(r.neto):'—';
-  document.getElementById('wiz-nograv').textContent=r.noGrav?fmt$(r.noGrav):'—';
-  document.getElementById('wiz-exento').textContent=r.exento?fmt$(r.exento):'—';
-  document.getElementById('wiz-iva').textContent=r.iva?fmt$(r.iva):'—';
-  document.getElementById('wiz-total').textContent=r.importe?fmt$(r.importe):'—';
+  // PDF viewer
+  document.getElementById('wiz-pdf-frame').src=pdf.url;
+  document.getElementById('wiz-pdf-frame').style.display='block';
+  document.getElementById('wiz-pdf-placeholder').style.display='none';
+  document.getElementById('wiz-pdf-nombre').textContent=pdf.name;
 
-  // Restaurar obs si ya tenía
+  // Fila Excel sugerida
+  actualizarPanelExcel(row, res.razonMatch);
+
+  // Obs y estado previo
   document.getElementById('wiz-obs').value=res.obs||'';
-  // Mostrar PDF asociado
-  mostrarPDF(r);
 
-  // Color de fondo del card según estado previo
+  // Selector de fila manual
+  poblarSelectorExcel(row);
+
+  // Color card según estado
   const card=document.getElementById('wiz-card');
-  card.style.borderColor=res.estado==='ok'?'var(--ok)':res.estado==='problema'?'var(--danger)':'var(--border)';
+  card.style.borderColor=res.estado==='ok'?'var(--ok)':res.estado==='problema'?'var(--danger)':res.estado==='no-encontrada'?'var(--warn)':'var(--border)';
   card.style.background=res.estado==='ok'?'var(--ok-light)':res.estado==='problema'?'var(--danger-light)':'var(--surface)';
 }
 
+function actualizarPanelExcel(row, razon){
+  if(row){
+    document.getElementById('wiz-match-status').innerHTML=razon?`<span class="badge badge-ok" style="font-size:10px">🔍 ${razon}</span>`:'';
+    document.getElementById('wiz-razon').textContent=row.razon||'—';
+    document.getElementById('wiz-cuit').textContent=row.cuit||'—';
+    document.getElementById('wiz-tipo').textContent=row.tipo||'—';
+    document.getElementById('wiz-nro').textContent=`${row.pdv}-${row.nro}`;
+    document.getElementById('wiz-fecha').textContent=row.fecha||'—';
+    document.getElementById('wiz-moneda').textContent=row.moneda||'ARS';
+    document.getElementById('wiz-neto').textContent=row.neto?fmt$(row.neto):'—';
+    document.getElementById('wiz-nograv').textContent=row.noGrav?fmt$(row.noGrav):'—';
+    document.getElementById('wiz-exento').textContent=row.exento?fmt$(row.exento):'—';
+    document.getElementById('wiz-iva').textContent=row.iva?fmt$(row.iva):'—';
+    document.getElementById('wiz-total').textContent=row.importe?fmt$(row.importe):'—';
+  } else {
+    document.getElementById('wiz-match-status').innerHTML='<span class="badge badge-warn" style="font-size:10px">⚠️ Sin candidata automática — elegí manualmente</span>';
+    ['wiz-razon','wiz-cuit','wiz-tipo','wiz-nro','wiz-fecha','wiz-moneda','wiz-neto','wiz-nograv','wiz-exento','wiz-iva','wiz-total']
+      .forEach(id=>document.getElementById(id).textContent='—');
+  }
+}
+
+function poblarSelectorExcel(rowActual){
+  document.getElementById('wiz-excel-search').value='';
+  renderListadoExcel(rowActual, '');
+}
+
+function filtrarListadoExcel(){
+  const q=document.getElementById('wiz-excel-search').value;
+  const rowActual=wizResultados[wizIdx]?.excelRow;
+  renderListadoExcel(rowActual, q);
+}
+
+function renderListadoExcel(rowActual, q){
+  const listado=document.getElementById('wiz-excel-listado');
+  const ql=q.toLowerCase();
+  const filtradas=wizExcel.filter(r=>
+    !ql||
+    (r.razon||'').toLowerCase().includes(ql)||
+    (r.cuit||'').includes(ql)||
+    (r.nro||'').includes(ql)||
+    (r.pdv||'').includes(ql)
+  );
+  if(!filtradas.length){
+    listado.innerHTML='<div style="padding:12px;text-align:center;color:var(--text3);font-size:12px">Sin resultados</div>';
+    return;
+  }
+  listado.innerHTML=filtradas.map(r=>{
+    const idx=wizExcel.indexOf(r);
+    const isSelected=r===rowActual;
+    return`<div onclick="seleccionarFilaManual(${idx})" style="
+      display:flex;align-items:center;justify-content:space-between;
+      padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);
+      background:${isSelected?'var(--accent-light)':'transparent'};
+      transition:background .1s;
+    " onmouseover="this.style.background='${isSelected?'var(--accent-light)':'var(--surface2)'}'"
+       onmouseout="this.style.background='${isSelected?'var(--accent-light)':'transparent'}'">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:${isSelected?'600':'400'};color:${isSelected?'var(--accent)':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.razon||r.cuit||'—'}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px;font-family:monospace">${r.pdv}-${r.nro} · ${r.fecha||'—'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px">
+        <div style="font-size:13px;font-weight:600;color:${isSelected?'var(--accent)':'var(--text)'}">${r.importe?fmt$(r.importe):'—'}</div>
+        ${isSelected?'<div style="font-size:10px;color:var(--accent)">✓ seleccionada</div>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function seleccionarFilaManual(idx){
+  wizResultados[wizIdx].excelRow=wizExcel[idx];
+  wizResultados[wizIdx].razonMatch='Selección manual';
+  actualizarPanelExcel(wizExcel[idx],'Selección manual');
+  renderListadoExcel(wizExcel[idx], document.getElementById('wiz-excel-search').value);
+}
+
+// ── Acciones ─────────────────────────────────
 function wizardAccion(accion){
   wizResultados[wizIdx].estado=accion;
   wizResultados[wizIdx].obs=document.getElementById('wiz-obs').value.trim();
-  if(wizIdx<wizData.length-1){
+  if(wizIdx<wizPDFs.length-1){
     wizIdx++;
     mostrarWizCard();
     document.getElementById('wiz-obs').value='';
@@ -1795,10 +1879,9 @@ function wizardAccion(accion){
 }
 
 function wizardNav(dir){
-  const newIdx=wizIdx+dir;
-  if(newIdx<0||newIdx>=wizData.length)return;
-  // Guardar obs actual
   wizResultados[wizIdx].obs=document.getElementById('wiz-obs').value.trim();
+  const newIdx=wizIdx+dir;
+  if(newIdx<0||newIdx>=wizPDFs.length)return;
   wizIdx=newIdx;
   mostrarWizCard();
 }
@@ -1825,74 +1908,72 @@ function filtrarConc(f,el){
 function renderResumen(){
   const ok=wizResultados.filter(r=>r.estado==='ok').length;
   const prob=wizResultados.filter(r=>r.estado==='problema').length;
-  const skip=wizResultados.filter(r=>r.estado==='skip').length;
+  const noEnc=wizResultados.filter(r=>r.estado==='no-encontrada').length;
   const pend=wizResultados.filter(r=>r.estado==='pendiente').length;
   document.getElementById('conc-stats').innerHTML=`
-    <div class="stat-card stat-ok"><div class="stat-label">Verificadas</div><div class="stat-value">${ok}</div><div class="stat-sub">Sin observaciones</div></div>
-    <div class="stat-card ${prob?'stat-danger':''}"><div class="stat-label">Con problema</div><div class="stat-value">${prob}</div><div class="stat-sub">Requieren atención</div></div>
-    <div class="stat-card"><div class="stat-label">Salteadas</div><div class="stat-value">${skip}</div><div class="stat-sub">Para revisar después</div></div>
-    <div class="stat-card ${pend?'stat-warn':''}"><div class="stat-label">Pendientes</div><div class="stat-value">${pend}</div><div class="stat-sub">Sin revisar aún</div></div>
+    <div class="stat-card stat-ok"><div class="stat-label">Verificadas</div><div class="stat-value">${ok}</div></div>
+    <div class="stat-card ${prob?'stat-danger':''}"><div class="stat-label">Con problema</div><div class="stat-value">${prob}</div></div>
+    <div class="stat-card ${noEnc?'stat-warn':''}"><div class="stat-label">No encontradas</div><div class="stat-value">${noEnc}</div></div>
+    <div class="stat-card ${pend?'stat-warn':''}"><div class="stat-label">Pendientes</div><div class="stat-value">${pend}</div></div>
   `;
-
-  const estadoBadge={
-    ok:'<span class="badge badge-ok">✅ Verificada</span>',
-    problema:'<span class="badge badge-danger">⚠️ Problema</span>',
-    skip:'<span class="badge badge-neutral">⏭ Salteada</span>',
-    pendiente:'<span class="badge badge-warn">⏳ Pendiente</span>'
-  };
-
+  const estadoBadge={ok:'<span class="badge badge-ok">✅ Verificada</span>',problema:'<span class="badge badge-danger">⚠️ Problema</span>','no-encontrada':'<span class="badge badge-warn">❌ No encontrada</span>',pendiente:'<span class="badge badge-neutral">⏳ Pendiente</span>'};
   const lista=concFiltro==='todos'?wizResultados:wizResultados.filter(r=>r.estado===concFiltro);
   const tb=document.getElementById('conc-tabla');
   if(!lista.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</td></tr>';return;}
-  tb.innerHTML=lista.map((r,i)=>{
+  tb.innerHTML=lista.map(r=>{
     const globalIdx=wizResultados.indexOf(r);
+    const row=r.excelRow;
     return`<tr style="cursor:pointer" onclick="wizIdx=${globalIdx};wizardVolver()">
       <td>${estadoBadge[r.estado]||''}</td>
-      <td style="font-weight:500;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.razon||'—'}</td>
-      <td style="font-family:monospace;font-size:12px">${r.pdv}-${r.nro}</td>
-      <td style="font-size:12px">${r.fecha||'—'}</td>
-      <td style="font-weight:600">${r.importe?fmt$(r.importe):'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${r.pdf.name.slice(0,30)}${r.pdf.name.length>30?'…':''}</td>
+      <td style="font-weight:500;font-size:13px">${row?row.razon||'—':'—'}</td>
+      <td style="font-family:monospace;font-size:12px">${row?row.pdv+'-'+row.nro:'—'}</td>
+      <td style="font-weight:600">${row&&row.importe?fmt$(row.importe):'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${r.obs||'—'}</td>
     </tr>`;
   }).join('');
 }
 
 function exportarConciliacion(){
-  const ws=XLSX.utils.json_to_sheet(wizResultados.map(r=>({
-    'Estado':r.estado==='ok'?'Verificada':r.estado==='problema'?'Con problema':r.estado==='skip'?'Salteada':'Pendiente',
-    'Emisor':r.razon||'',
-    'CUIT':r.cuit||'',
-    'Tipo':r.tipo||'',
-    'Punto de Venta':r.pdv||'',
-    'Número':r.nro||'',
-    'Fecha':r.fecha||'',
-    'Neto Gravado':r.neto||0,
-    'IVA':r.iva||0,
-    'Total':r.importe||0,
-    'Moneda':r.moneda||'ARS',
-    'Observación':r.obs||''
-  })));
+  const ws=XLSX.utils.json_to_sheet(wizResultados.map(r=>{
+    const row=r.excelRow||{};
+    return{
+      'Estado':r.estado==='ok'?'Verificada':r.estado==='problema'?'Con problema':r.estado==='no-encontrada'?'No encontrada':'Pendiente',
+      'PDF':r.pdf.name,
+      'Emisor (Excel)':row.razon||'',
+      'CUIT':row.cuit||'',
+      'Tipo':row.tipo||'',
+      'Punto de Venta':row.pdv||'',
+      'Número':row.nro||'',
+      'Fecha':row.fecha||'',
+      'Total':row.importe||0,
+      'Moneda':row.moneda||'ARS',
+      'Observación':r.obs||''
+    };
+  }));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Conciliación');
   XLSX.writeFile(wb,'conciliacion_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 function limpiarConciliacion(){
-  wizData=[];wizResultados=[];wizIdx=0;
+  wizPDFs.forEach(p=>URL.revokeObjectURL(p.url));
+  wizPDFs=[];wizExcel=[];wizIdx=0;wizResultados=[];
   document.getElementById('conc-paso-carga').style.display='block';
   document.getElementById('conc-paso-wizard').style.display='none';
   document.getElementById('conc-paso-resumen').style.display='none';
-  document.getElementById('excel-label').textContent='Hacer clic o arrastrar el Excel aquí';
-  document.getElementById('drop-excel').style.borderColor='';
-  document.getElementById('drop-excel').style.background='';
+  document.getElementById('excel-label').textContent='Hacer clic o arrastrar aquí';
+  document.getElementById('pdfs-wiz-label').textContent='Hacer clic o arrastrar aquí';
+  document.getElementById('drop-excel').style.borderColor='';document.getElementById('drop-excel').style.background='';
+  document.getElementById('drop-pdfs-wiz').style.borderColor='';document.getElementById('drop-pdfs-wiz').style.background='';
   document.getElementById('excel-load-status').textContent='';
+  document.getElementById('pdfs-wiz-status').textContent='';
   document.getElementById('input-excel').value='';
-  wizPDFs.forEach(p=>URL.revokeObjectURL(p.url));
-  wizPDFs=[];
-  if(document.getElementById('input-pdfs-wiz'))document.getElementById('input-pdfs-wiz').value='';
+  document.getElementById('input-pdfs-wiz').value='';
 }
 
 // ═══════════════════════════════════════════
+// IMPORTAR POR TAREA// ═══════════════════════════════════════════
 // IMPORTAR POR TAREA// ═══════════════════════════════════════════
 // IMPORTAR POR TAREA
 // ═══════════════════════════════════════════

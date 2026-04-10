@@ -580,9 +580,16 @@ textarea{height:80px;resize:vertical}
           <div class="card">
             <div class="form-row" style="margin-bottom:1rem">
               <label class="form-label">Elegir fila del Excel</label>
-              <div style="position:relative;margin-bottom:6px">
-                <input type="text" id="wiz-excel-search" placeholder="Buscar por emisor, CUIT o número..." oninput="filtrarListadoExcel()" style="font-size:12px;padding-left:30px">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3)"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">
+                <div style="position:relative;flex:1">
+                  <input type="text" id="wiz-excel-search" placeholder="Buscar por emisor, CUIT, número o importe..." oninput="filtrarListadoExcel()" style="font-size:12px;padding-left:30px">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3)"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                </div>
+                <div style="display:flex;gap:3px;flex-shrink:0">
+                  <button id="wiz-fil-todos" class="btn btn-sm" onclick="setMonedaFiltro('todos',this)" style="font-size:11px;padding:4px 8px;background:var(--accent);color:white;border-color:var(--accent)">Todos</button>
+                  <button id="wiz-fil-ars" class="btn btn-sm" onclick="setMonedaFiltro('ars',this)" style="font-size:11px;padding:4px 8px">ARS</button>
+                  <button id="wiz-fil-ext" class="btn btn-sm" onclick="setMonedaFiltro('ext',this)" style="font-size:11px;padding:4px 8px">USD/Ext.</button>
+                </div>
               </div>
               <div id="wiz-excel-listado" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg)"></div>
             </div>
@@ -1912,6 +1919,7 @@ function normalizeExcelRow(row){
     noGrav:normImporte(get('No Gravado')),
     exento:normImporte(get('Exento')),
     moneda:String(get('Moneda')||'PES').trim(),
+    tipoCambio:normImporte(get('Tipo Cambio')||get('Tipo de Cambio')||0),
   };
 }
 
@@ -2048,12 +2056,22 @@ function actualizarPanelExcel(row, razon){
     document.getElementById('wiz-tipo').textContent=row.tipo||'—';
     document.getElementById('wiz-nro').textContent=`${row.pdv}-${row.nro}`;
     document.getElementById('wiz-fecha').textContent=row.fecha||'—';
-    document.getElementById('wiz-moneda').textContent=row.moneda||'ARS';
+    const monedaRow=row.moneda||'PES';
+    const esExt=monedaRow!=='PES'&&monedaRow!=='ARS'&&monedaRow!=='$';
+    const usdEstimado=(esExt&&row.tipoCambio>0)?(row.importe/row.tipoCambio):null;
+    document.getElementById('wiz-moneda').innerHTML=esExt
+      ?`<span style="color:var(--warn);font-weight:600">${monedaRow}</span> <span style="font-size:11px;color:var(--text3)">(importe en ARS al T/C AFIP)</span>`
+      :'ARS';
     document.getElementById('wiz-neto').textContent=row.neto?fmt$(row.neto):'—';
     document.getElementById('wiz-nograv').textContent=row.noGrav?fmt$(row.noGrav):'—';
     document.getElementById('wiz-exento').textContent=row.exento?fmt$(row.exento):'—';
     document.getElementById('wiz-iva').textContent=row.iva?fmt$(row.iva):'—';
-    document.getElementById('wiz-total').textContent=row.importe?fmt$(row.importe):'—';
+    document.getElementById('wiz-total').innerHTML=row.importe
+      ?`${fmt$(row.importe)}${esExt
+        ?` <span class="badge badge-warn" style="font-size:10px">${monedaRow}→ARS</span>`
+          +(usdEstimado?`<div style="font-size:11px;color:var(--warn);margin-top:3px">≈ ${monedaRow} ${usdEstimado.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})} <span style="color:var(--text3)">(T/C: ${(row.tipoCambio||0).toLocaleString('es-AR',{minimumFractionDigits:2})})</span></div>`:'')
+        :''}`
+      :'—';
   } else {
     document.getElementById('wiz-match-status').innerHTML='<span class="badge badge-warn" style="font-size:10px">⚠️ Sin candidata automática — elegí manualmente</span>';
     ['wiz-razon','wiz-cuit','wiz-tipo','wiz-nro','wiz-fecha','wiz-moneda','wiz-neto','wiz-nograv','wiz-exento','wiz-iva','wiz-total']
@@ -2066,6 +2084,15 @@ function poblarSelectorExcel(rowActual){
   renderListadoExcel(rowActual, '');
 }
 
+let wizMonedaFiltro='todos';
+function setMonedaFiltro(f, el){
+  wizMonedaFiltro=f;
+  document.querySelectorAll('#wiz-fil-todos,#wiz-fil-ars,#wiz-fil-ext').forEach(b=>{
+    b.style.background=''; b.style.color=''; b.style.borderColor='';
+  });
+  el.style.background='var(--accent)'; el.style.color='white'; el.style.borderColor='var(--accent)';
+  filtrarListadoExcel();
+}
 function filtrarListadoExcel(){
   const q=document.getElementById('wiz-excel-search').value;
   const rowActual=wizResultados[wizIdx]?.excelRow;
@@ -2075,13 +2102,30 @@ function filtrarListadoExcel(){
 function renderListadoExcel(rowActual, q){
   const listado=document.getElementById('wiz-excel-listado');
   const ql=q.toLowerCase();
-  const filtradas=wizExcel.filter(r=>
-    !ql||
-    (r.razon||'').toLowerCase().includes(ql)||
-    (r.cuit||'').includes(ql)||
-    (r.nro||'').includes(ql)||
-    (r.pdv||'').includes(ql)
-  );
+  const filtradas=wizExcel.filter(r=>{
+    // Filtro de moneda
+    const moneda=r.moneda||'PES';
+    const esExt=moneda!=='PES'&&moneda!=='ARS'&&moneda!=='$';
+    if(wizMonedaFiltro==='ars'&&esExt)return false;
+    if(wizMonedaFiltro==='ext'&&!esExt)return false;
+    if(!ql)return true;
+    if((r.razon||'').toLowerCase().includes(ql))return true;
+    if((r.cuit||'').includes(ql))return true;
+    if((r.nro||'').includes(ql))return true;
+    if((r.pdv||'').includes(ql))return true;
+    // Buscar por importe — comparar contra el número ingresado
+    if(r.importe>0){
+      const impStr=String(r.importe);
+      const impARS=r.importe.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+      if(impStr.includes(ql)||impARS.includes(ql))return true;
+      // También comparar contra estimado USD
+      if(r.tipoCambio>0){
+        const usd=(r.importe/r.tipoCambio).toFixed(2);
+        if(usd.includes(ql))return true;
+      }
+    }
+    return false;
+  });
   if(!filtradas.length){
     listado.innerHTML='<div style="padding:12px;text-align:center;color:var(--text3);font-size:12px">Sin resultados</div>';
     return;
@@ -2103,7 +2147,9 @@ function renderListadoExcel(rowActual, q){
       <div style="text-align:right;flex-shrink:0;margin-left:8px">
         <div style="font-size:13px;font-weight:600;color:${isSelected?'var(--accent)':'var(--text)'}">
           ${r.importe?fmt$(r.importe):'—'}
-          ${(r.moneda&&r.moneda!=='PES'&&r.moneda!=='ARS')?`<span class="badge badge-warn" style="font-size:9px">${r.moneda}</span>`:''}
+          ${(r.moneda&&r.moneda!=='PES'&&r.moneda!=='ARS')
+            ?`<span class="badge badge-warn" style="font-size:9px">${r.moneda}</span>${r.tipoCambio>0?`<div style="font-size:10px;color:var(--warn)">≈ ${r.moneda} ${(r.importe/r.tipoCambio).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`:''}`
+            :''}
         </div>
         ${isSelected?'<div style="font-size:10px;color:var(--accent)">✓ seleccionada</div>':''}
       </div>

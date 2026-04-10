@@ -2101,7 +2101,10 @@ function renderListadoExcel(rowActual, q){
         <div style="font-size:11px;color:var(--text3);margin-top:1px;font-family:monospace">${r.pdv}-${r.nro} · ${r.fecha||'—'}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;margin-left:8px">
-        <div style="font-size:13px;font-weight:600;color:${isSelected?'var(--accent)':'var(--text)'}">${r.importe?fmt$(r.importe):'—'}</div>
+        <div style="font-size:13px;font-weight:600;color:${isSelected?'var(--accent)':'var(--text)'}">
+          ${r.importe?fmt$(r.importe):'—'}
+          ${(r.moneda&&r.moneda!=='PES'&&r.moneda!=='ARS')?`<span class="badge badge-warn" style="font-size:9px">${r.moneda}</span>`:''}
+        </div>
         ${isSelected?'<div style="font-size:10px;color:var(--accent)">✓ seleccionada</div>':''}
       </div>
     </div>`;

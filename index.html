@@ -394,19 +394,24 @@ textarea{height:80px;resize:vertical}
         </div>
         <div id="alert-venc"></div>
         <div class="card">
-          <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Tipo</th><th>Responsable</th><th>Origen</th><th>Estado</th><th>Notas</th><th></th></tr></thead><tbody id="tabla-vencimientos"></tbody></table></div>
+          <div id="tabla-vencimientos"></div>
           <div id="empty-venc" class="empty" style="display:none"><p>No hay tareas. Agregá la primera o importá desde AFIP.</p></div>
         </div>
       </div>
       <div class="section" id="s-cobros">
-        <div class="stats-grid" id="cobros-stats"></div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:6px">
+          <button onclick="toggleCobrosStats()" id="btn-toggle-stats" style="background:none;border:none;cursor:pointer;color:var(--text3);display:flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
+            <svg id="stats-eye-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            Mostrar totales
+          </button>
+        </div>
+        <div class="stats-grid" id="cobros-stats" style="display:none"></div>
         <div class="card">
           <div class="card-header">
             <div class="tabs" style="margin-bottom:0">
               <button class="tab active" onclick="filterCobros('todos',this)">Todos</button>
               <button class="tab" onclick="filterCobros('pendiente',this)">Pendientes</button>
               <button class="tab" onclick="filterCobros('cobrado',this)">Cobrados</button>
-              <button class="tab" onclick="filterCobros('vencido',this)">Vencidos</button>
             </div>
             <select id="filter-cobros-cliente" onchange="renderCobros()" style="width:auto;font-size:12px;max-width:180px"><option value="">Todos los clientes</option></select>
           </div>
@@ -683,7 +688,7 @@ textarea{height:80px;resize:vertical}
   </div>
 </div>
 <div class="modal-bg" id="modal-cliente">
-  <div class="modal">
+  <div class="modal" style="width:620px">
     <div class="modal-title" id="mc-title">Nuevo cliente</div>
     <div class="form-grid">
       <div class="form-row" style="grid-column:1/-1"><label class="form-label">Nombre / Razón social *</label><input type="text" id="mc-nombre" placeholder="García & Asociados SRL"></div>
@@ -718,6 +723,17 @@ textarea{height:80px;resize:vertical}
       </div>
     </div>
     <div class="form-row"><label class="form-label">Notas</label><textarea id="mc-notas"></textarea></div>
+
+    <!-- Accesos del cliente -->
+    <div id="mc-accesos-section" style="display:none">
+      <div style="border-top:1px solid var(--border);margin:1.25rem 0 1rem"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Accesos y claves</div>
+        <button class="btn btn-sm" onclick="mcAgregarAcceso()">+ Agregar acceso</button>
+      </div>
+      <div id="mc-accesos-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:.75rem"></div>
+    </div>
+
     <div class="modal-footer"><button class="btn" onclick="closeModal('modal-cliente')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-cliente" onclick="guardarCliente()">Guardar cliente</button></div>
   </div>
 </div>
@@ -742,10 +758,9 @@ textarea{height:80px;resize:vertical}
       <div class="form-row"><label class="form-label">Cliente *</label><select id="mcob-cliente"></select></div>
       <div class="form-row"><label class="form-label">Concepto *</label><input type="text" id="mcob-concepto" placeholder="Honorarios Abril"></div>
       <div class="form-row"><label class="form-label">Importe ($) *</label><input type="number" id="mcob-importe" placeholder="0"></div>
-      <div class="form-row"><label class="form-label">Vencimiento</label><input type="date" id="mcob-venc"></div>
       <div class="form-row"><label class="form-label">Fecha cobro</label><input type="date" id="mcob-fecha"></div>
       <div class="form-row"><label class="form-label">Medio de pago</label><select id="mcob-medio"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option><option>Otro</option></select></div>
-      <div class="form-row" style="grid-column:1/-1"><label class="form-label">Estado</label><select id="mcob-estado"><option value="pendiente">Pendiente</option><option value="cobrado">Cobrado</option><option value="vencido">Vencido</option></select></div>
+      <div class="form-row" style="grid-column:1/-1"><label class="form-label">Estado</label><select id="mcob-estado"><option value="pendiente">Pendiente</option><option value="cobrado">Cobrado</option></select></div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('modal-cobro')">Cancelar</button><button class="btn btn-primary" id="btn-guardar-cobro" onclick="guardarCobro()">Guardar cobro</button></div>
   </div>
@@ -1282,7 +1297,44 @@ function openModalCliente(id){
   document.getElementById('mc-agente-ret').checked=!!(c?.agente_retencion);
   document.getElementById('mc-agente-perc-gan').checked=!!(c?.agente_percepcion_ganancias);
   document.getElementById('mc-agente-perc').checked=!!(c?.agente_percepcion);
+  // Mostrar accesos solo si es edición
+  const accSection=document.getElementById('mc-accesos-section');
+  if(id){
+    accSection.style.display='block';
+    renderAccesosModal(id);
+  } else {
+    accSection.style.display='none';
+    document.getElementById('mc-accesos-lista').innerHTML='';
+  }
   openModal('modal-cliente');
+}
+
+function renderAccesosModal(clienteId){
+  const accesos=db.accesos.filter(a=>a.cliente_id===clienteId);
+  const lista=document.getElementById('mc-accesos-lista');
+  if(!accesos.length){
+    lista.innerHTML='<div style="font-size:12px;color:var(--text3);padding:6px 0">Sin accesos guardados aún.</div>';
+    return;
+  }
+  lista.innerHTML=accesos.map(a=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);font-size:12px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500">${a.servicio||'—'}</div>
+        <div style="color:var(--text3);font-family:monospace">${a.usuario||'—'}</div>
+      </div>
+      <div style="font-family:monospace;filter:blur(3px);cursor:pointer;color:var(--text2)" onclick="this.style.filter=this.style.filter?'':'blur(3px)'">${a.password||'—'}</div>
+      <button class="action-btn" onclick="openModalAcceso('${a.id}');closeModal('modal-cliente')"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+    </div>`).join('');
+}
+
+function mcAgregarAcceso(){
+  const id=editId;
+  closeModal('modal-cliente');
+  openModalAcceso();
+  setTimeout(()=>{
+    const sel=document.getElementById('macc-cliente');
+    if(sel&&id)sel.value=id;
+  },50);
 }
 async function guardarCliente(){
   const nombre=document.getElementById('mc-nombre').value.trim();
@@ -1318,8 +1370,7 @@ function renderClientes(){
     <td>${estadoBadge(c.estado)}</td>
     <td><div style="display:flex;gap:4px">
       <button class="action-btn" title="Abrir ficha" onclick="abrirFichaCliente('${c.id}')" style="font-size:11px;font-weight:500;color:var(--accent);padding:4px 8px">Abrir</button>
-      <button class="action-btn" title="Editar" onclick="openModalCliente('${c.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-      <button class="action-btn" onclick="openModalCliente('${c.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button class="action-btn" title="Editar" onclick="openModalCliente('${c.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <button class="action-btn del" onclick="eliminarCliente('${c.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
     </div></td>
   </tr>`).join('');
@@ -1415,22 +1466,62 @@ function renderVencimientos(){
   const tb=document.getElementById('tabla-vencimientos'),em=document.getElementById('empty-venc');
   if(!list.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
-  tb.innerHTML=list.map(v=>{
-    const c=getCliente(v.cliente_id);
-    return`<tr>
-      <td style="font-weight:500;white-space:nowrap">${fmtDate(v.fecha)}</td>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${initials(c.nombre)}</div>${c.nombre||'—'}</div></td>
-      <td>${v.tipo}</td>
-      <td style="color:var(--text2)">${v.responsable||'—'}</td>
-      <td>${v.origen==='afip'?'<span class="badge badge-afip">AFIP</span>':'<span class="badge badge-neutral">Manual</span>'}</td>
-      <td>${vencBadge(v)}</td>
-      <td style="color:var(--text3);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.notas||'—'}</td>
-      <td><div style="display:flex;gap:4px">
-        ${v.estado!=='completado'?`<button class="action-btn" onclick="marcarCompletado('${v.id}')" style="color:var(--ok)"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></button>`:''}
-        <button class="action-btn" onclick="openModalVenc('${v.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="action-btn del" onclick="eliminarVenc('${v.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
-      </div></td>
-    </tr>`;
+
+  // Agrupar por fecha
+  const grupos={};
+  list.forEach(v=>{if(!grupos[v.fecha])grupos[v.fecha]=[];grupos[v.fecha].push(v);});
+
+  // Abrir automáticamente grupos urgentes (hoy, vencidos, próximos 3 días)
+  const gruposAbiertos=new Set(
+    Object.keys(grupos).filter(f=>{const d=daysTo(f);return d<=3;})
+  );
+
+  tb.innerHTML=Object.keys(grupos).sort().map(fecha=>{
+    const items=grupos[fecha];
+    const d=daysTo(fecha);
+    const esHoy=d===0;
+    const esVencido=d<0;
+    const esPronto=d>0&&d<=3;
+    const headerColor=esVencido?'var(--danger)':esHoy?'var(--danger)':esPronto?'var(--warn)':'var(--text2)';
+    const headerBg=esVencido?'var(--danger-light)':esHoy?'var(--danger-light)':esPronto?'var(--warn-light)':'var(--surface2)';
+    const etiqueta=esHoy?'HOY':esVencido?`Vencido (${Math.abs(d)}d)`:esPronto?`En ${d} día${d>1?'s':''}`:d<=7?`En ${d} días`:'';
+    const abierto=gruposAbiertos.has(fecha);
+    const gid=`vg-${fecha.replace(/-/g,'')}`;
+
+    return`<div style="margin-bottom:8px">
+      <!-- Encabezado clicable -->
+      <div onclick="toggleVencGrupo('${gid}')" style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:${headerBg};border-radius:var(--radius);border-left:3px solid ${headerColor};cursor:pointer;user-select:none;transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <svg id="${gid}-arrow" width="14" height="14" fill="none" stroke="${headerColor}" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0;transition:transform .2s;transform:${abierto?'rotate(90deg)':'rotate(0deg)'}"><polyline points="9 18 15 12 9 6"/></svg>
+        <div style="font-weight:600;font-size:14px;color:${headerColor}">${fmtDate(fecha)}</div>
+        ${etiqueta?`<span class="badge" style="background:${headerColor};color:white;font-size:10px">${etiqueta}</span>`:''}
+        <div style="margin-left:auto;font-size:11px;color:var(--text3)">${items.length} tarea${items.length>1?'s':''}</div>
+      </div>
+      <!-- Tareas del día -->
+      <div id="${gid}" style="display:${abierto?'flex':'none'};flex-direction:column;gap:4px;padding:6px 4px 2px">
+        ${items.map(v=>{
+          const c=getCliente(v.cliente_id);
+          return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${v.estado==='completado'?'var(--ok-light)':'var(--surface)'};border:1px solid var(--border);border-radius:var(--radius)">
+            <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0">${initials(c.nombre)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font-weight:500;font-size:13px">${c.nombre||'—'}</span>
+                <span style="color:var(--text3);font-size:12px">·</span>
+                <span style="font-size:13px;color:var(--text2)">${v.tipo}</span>
+                ${v.origen==='afip'?'<span class="badge badge-afip" style="font-size:9px">AFIP</span>':''}
+              </div>
+              ${v.responsable?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Resp: ${v.responsable}</div>`:''}
+              ${v.notas?`<div style="font-size:11px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px">${v.notas}</div>`:''}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              ${vencBadge(v)}
+              ${v.estado!=='completado'?`<button class="action-btn" title="Completar" onclick="marcarCompletado('${v.id}')" style="color:var(--ok)"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></button>`:''}
+              <button class="action-btn" title="Editar" onclick="openModalVenc('${v.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+              <button class="action-btn del" title="Eliminar" onclick="eliminarVenc('${v.id}')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
   }).join('');
 }
 async function marcarCompletado(id){
@@ -1441,6 +1532,15 @@ async function marcarCompletado(id){
   const i=db.vencimientos.findIndex(v=>v.id===id);db.vencimientos[i]=res.data;
   renderVencimientos();renderAll();toast('Tarea completada ✓');
 }
+function toggleVencGrupo(gid){
+  const el=document.getElementById(gid);
+  const arrow=document.getElementById(gid+'-arrow');
+  const abierto=el.style.display!=='none';
+  el.style.display=abierto?'none':'flex';
+  el.style.flexDirection='column';
+  if(arrow)arrow.style.transform=abierto?'rotate(0deg)':'rotate(90deg)';
+}
+
 async function eliminarVenc(id){
   confirm_('Eliminar tarea','¿Eliminar esta tarea?',async()=>{
     setSyncing(true);await sb.from('vencimientos').delete().eq('id',id);setSyncing(false);
@@ -1459,7 +1559,6 @@ function openModalCobro(id){
   if(cb)document.getElementById('mcob-cliente').value=cb.cliente_id;
   document.getElementById('mcob-concepto').value=cb?.concepto||'';
   document.getElementById('mcob-importe').value=cb?.importe||'';
-  document.getElementById('mcob-venc').value=cb?.vencimiento||'';
   document.getElementById('mcob-fecha').value=cb?.fecha_cobro||'';
   document.getElementById('mcob-medio').value=cb?.medio||'Transferencia';
   document.getElementById('mcob-estado').value=cb?.estado||'pendiente';
@@ -1472,7 +1571,7 @@ async function guardarCobro(){
   if(!clienteId||!concepto||!importe){toast('Cliente, concepto e importe son obligatorios');return;}
   const btn=document.getElementById('btn-guardar-cobro');btn.disabled=true;
   setSyncing(true);
-  const data={cliente_id:clienteId,concepto,importe:Number(importe),vencimiento:document.getElementById('mcob-venc').value||null,fecha_cobro:document.getElementById('mcob-fecha').value||null,medio:document.getElementById('mcob-medio').value,estado:document.getElementById('mcob-estado').value,created_by:currentUser.id};
+  const data={cliente_id:clienteId,concepto,importe:Number(importe),vencimiento:null,fecha_cobro:document.getElementById('mcob-fecha').value||null,medio:document.getElementById('mcob-medio').value,estado:document.getElementById('mcob-estado').value,created_by:currentUser.id};
   let res;
   if(editId){res=await sb.from('cobros').update(data).eq('id',editId).select().single();}
   else{res=await sb.from('cobros').insert(data).select().single();}
@@ -1484,20 +1583,83 @@ async function guardarCobro(){
   closeModal('modal-cobro');renderCobros();renderAll();
 }
 function filterCobros(f,el){cobrosFiltro=f;document.querySelectorAll('#s-cobros .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderCobros();}
+let cobrosStatsVisible=false;
+function toggleCobrosStats(){
+  cobrosStatsVisible=!cobrosStatsVisible;
+  const el=document.getElementById('cobros-stats');
+  const btn=document.getElementById('btn-toggle-stats');
+  const icon=document.getElementById('stats-eye-icon');
+  el.style.display=cobrosStatsVisible?'grid':'none';
+  btn.innerHTML=cobrosStatsVisible
+    ?`<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Ocultar totales`
+    :`<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Mostrar totales`;
+}
+
 function renderCobros(){
   populateSelects();
   const fC=document.getElementById('filter-cobros-cliente')?.value||'';
   let list=db.cobros.slice().sort((a,b)=>(b.vencimiento||'').localeCompare(a.vencimiento||''));
   if(cobrosFiltro!=='todos')list=list.filter(c=>c.estado===cobrosFiltro);
   if(fC)list=list.filter(c=>c.cliente_id===fC);
+  // Mes actual
+  const ahora=new Date();
+  const mesActual=ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0');
+  const dia=ahora.getDate();
+
+  // Cobrado total
   const cob=db.cobros.filter(c=>c.estado==='cobrado').reduce((s,c)=>s+Number(c.importe||0),0);
-  const pen=db.cobros.filter(c=>c.estado==='pendiente').reduce((s,c)=>s+Number(c.importe||0),0);
-  const venc=db.cobros.filter(c=>c.estado==='vencido').reduce((s,c)=>s+Number(c.importe||0),0);
+
+  // A recaudar: suma de honorarios mensuales de todos los clientes activos con honorario definido
+  const clientesConHonorario=db.clientes.filter(c=>c.estado==='Activo'&&Number(c.honorario||0)>0);
+  const penMes=clientesConHonorario.reduce((s,c)=>s+Number(c.honorario||0),0);
+  const penMesN=clientesConHonorario.length;
+
+  // Vencido: pendientes cuyo vencimiento ya pasó y estamos después del día 12 del mes
+  // (los primeros 12 días son gracia, después del 12 se considera vencido)
+  const vencStat=db.cobros.filter(c=>{
+    if(c.estado!=='pendiente')return false;
+    const v=c.vencimiento||'';
+    if(!v)return false;
+    const fechaVenc=new Date(v+'T00:00:00');
+    const hoyD=new Date(today()+'T00:00:00');
+    // Vencido si: el vencimiento es de un mes anterior, O es del mes actual pero ya pasaron 12 días del mes
+    const vMes=v.slice(0,7);
+    if(vMes<mesActual)return true; // mes anterior = vencido
+    if(vMes===mesActual&&dia>12&&fechaVenc<hoyD)return true; // mismo mes pero pasó día 12
+    return false;
+  }).reduce((s,c)=>s+Number(c.importe||0),0);
+  const vencN=db.cobros.filter(c=>{
+    if(c.estado!=='pendiente')return false;
+    const v=c.vencimiento||''; if(!v)return false;
+    const vMes=v.slice(0,7);
+    const fechaVenc=new Date(v+'T00:00:00');
+    if(vMes<mesActual)return true;
+    if(vMes===mesActual&&dia>12&&fechaVenc<new Date(today()+'T00:00:00'))return true;
+    return false;
+  }).length;
+
+
+  const mesLabel=MESES[ahora.getMonth()+1];
+  // Cobrado del mes actual
+  const cobMes=db.cobros.filter(c=>c.estado==='cobrado'&&(c.fecha_cobro||'').startsWith(mesActual)).reduce((s,c)=>s+Number(c.importe||0),0);
+  // Sin cobrar = A recaudar - cobrado del mes
+  const sinCobrar=Math.max(0,penMes-cobMes);
   document.getElementById('cobros-stats').innerHTML=`
-    <div class="stat-card stat-ok"><div class="stat-label">Cobrado</div><div class="stat-value">${fmt$(cob)}</div></div>
-    <div class="stat-card stat-warn"><div class="stat-label">Pendiente</div><div class="stat-value">${fmt$(pen)}</div></div>
-    <div class="stat-card stat-danger"><div class="stat-label">Vencido</div><div class="stat-value">${fmt$(venc)}</div></div>
-    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${fmt$(cob+pen+venc)}</div></div>
+    <div class="stat-card ${penMes>0?'stat-warn':''}">
+      <div class="stat-label">A recaudar — ${mesLabel}</div>
+      <div class="stat-value">${fmt$(penMes)}</div>
+      <div class="stat-sub">${penMesN} cliente${penMesN!==1?'s':''} activo${penMesN!==1?'s':''}</div>
+    </div>
+    <div class="stat-card stat-ok">
+      <div class="stat-label">Cobrado — ${mesLabel}</div>
+      <div class="stat-value">${fmt$(cobMes)}</div>
+      <div class="stat-sub">de ${fmt$(penMes)}</div>
+    </div>
+    <div class="stat-card ${sinCobrar>0?'stat-danger':'stat-ok'}">
+      <div class="stat-label">Sin cobrar</div>
+      <div class="stat-value">${fmt$(sinCobrar)}</div>
+      <div class="stat-sub">${sinCobrar>0?vencN+' con +12 días':'Al día 🎉'}</div>
+    </div>
   `;
   const tb=document.getElementById('tabla-cobros'),em=document.getElementById('empty-cobros');
   if(!list.length){tb.innerHTML='';em.style.display='block';return;}
@@ -1559,6 +1721,23 @@ function openModalAcceso(id){
   document.getElementById('macc-pass').value=a?.password||'';
   document.getElementById('macc-notas').value=a?.notas||'';
   openModal('modal-acceso');
+  // Si es nuevo acceso y hay cliente seleccionado, traer CUIT automáticamente
+  if(!id){
+    autocompletarCuitAcceso();
+    // Actualizar CUIT cuando cambia el cliente
+    document.getElementById('macc-cliente').onchange=autocompletarCuitAcceso;
+  } else {
+    document.getElementById('macc-cliente').onchange=null;
+  }
+}
+
+function autocompletarCuitAcceso(){
+  const clienteId=document.getElementById('macc-cliente').value;
+  const usuarioEl=document.getElementById('macc-usuario');
+  // Solo autocompletar si el campo está vacío
+  if(!clienteId||usuarioEl.value.trim())return;
+  const c=db.clientes.find(x=>x.id===clienteId);
+  if(c?.cuit) usuarioEl.value=c.cuit;
 }
 
 async function guardarAcceso(){

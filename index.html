@@ -435,7 +435,9 @@ textarea{height:80px;resize:vertical}
             <button class="tab" onclick="setAfipTab('f931',this)">Cargas Soc.</button>
             <button class="tab" onclick="setAfipTab('sicore',this)">SICORE</button>
             <button class="tab" onclick="setAfipTab('ganancias_pj',this)">Ganancias PJ</button>
-            <button class="tab" onclick="setAfipTab('iibb',this)">IIBB / CM</button>
+            <button class="tab" onclick="setAfipTab('iibb_arba',this)">IIBB ARBA</button>
+            <button class="tab" onclick="setAfipTab('iibb_agip',this)">IIBB AGIP</button>
+            <button class="tab" onclick="setAfipTab('iibb',this)">IIBB Conv. ML</button>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <select id="afip-term" onchange="renderAfipTab()" style="width:auto;font-size:12px">
@@ -948,6 +950,32 @@ const AFIP={
     10:{0:'2026-10-13',1:'2026-10-13',2:'2026-10-13',3:'2026-10-13',4:'2026-10-14',5:'2026-10-14',6:'2026-10-14',7:'2026-10-15',8:'2026-10-15',9:'2026-10-15'},
     11:{0:'2026-11-13',1:'2026-11-13',2:'2026-11-13',3:'2026-11-13',4:'2026-11-16',5:'2026-11-16',6:'2026-11-16',7:'2026-11-17',8:'2026-11-17',9:'2026-11-17'},
     12:{0:'2026-12-14',1:'2026-12-14',2:'2026-12-14',3:'2026-12-14',4:'2026-12-15',5:'2026-12-15',6:'2026-12-15',7:'2026-12-16',8:'2026-12-16',9:'2026-12-16'}
+  },
+  IIBB_ARBA:{
+    2:{0:'2026-02-23',1:'2026-02-23',2:'2026-02-24',3:'2026-02-24',4:'2026-02-25',5:'2026-02-25',6:'2026-02-26',7:'2026-02-26',8:'2026-02-27',9:'2026-02-27'},
+    3:{0:'2026-03-25',1:'2026-03-25',2:'2026-03-26',3:'2026-03-26',4:'2026-03-27',5:'2026-03-27',6:'2026-03-30',7:'2026-03-30',8:'2026-03-31',9:'2026-03-31'},
+    4:{0:'2026-04-20',1:'2026-04-20',2:'2026-04-21',3:'2026-04-21',4:'2026-04-22',5:'2026-04-22',6:'2026-04-23',7:'2026-04-23',8:'2026-04-24',9:'2026-04-24'},
+    5:{0:'2026-05-18',1:'2026-05-18',2:'2026-05-19',3:'2026-05-19',4:'2026-05-20',5:'2026-05-20',6:'2026-05-21',7:'2026-05-21',8:'2026-05-22',9:'2026-05-22'},
+    6:{0:'2026-06-22',1:'2026-06-22',2:'2026-06-23',3:'2026-06-23',4:'2026-06-24',5:'2026-06-24',6:'2026-06-25',7:'2026-06-25',8:'2026-06-26',9:'2026-06-26'},
+    7:{0:'2026-07-20',1:'2026-07-20',2:'2026-07-21',3:'2026-07-21',4:'2026-07-22',5:'2026-07-22',6:'2026-07-23',7:'2026-07-23',8:'2026-07-24',9:'2026-07-24'},
+    8:{0:'2026-08-24',1:'2026-08-24',2:'2026-08-25',3:'2026-08-25',4:'2026-08-26',5:'2026-08-26',6:'2026-08-27',7:'2026-08-27',8:'2026-08-28',9:'2026-08-28'},
+    9:{0:'2026-09-21',1:'2026-09-21',2:'2026-09-22',3:'2026-09-22',4:'2026-09-23',5:'2026-09-23',6:'2026-09-24',7:'2026-09-24',8:'2026-09-25',9:'2026-09-25'},
+    10:{0:'2026-10-19',1:'2026-10-19',2:'2026-10-20',3:'2026-10-20',4:'2026-10-21',5:'2026-10-21',6:'2026-10-22',7:'2026-10-22',8:'2026-10-23',9:'2026-10-23'},
+    11:{0:'2026-11-24',1:'2026-11-24',2:'2026-11-25',3:'2026-11-25',4:'2026-11-26',5:'2026-11-26',6:'2026-11-27',7:'2026-11-27',8:'2026-11-30',9:'2026-11-30'},
+    12:{0:'2026-12-21',1:'2026-12-21',2:'2026-12-22',3:'2026-12-22',4:'2026-12-23',5:'2026-12-23',6:'2026-12-28',7:'2026-12-28',8:'2026-12-29',9:'2026-12-29'}
+  },
+  IIBB_AGIP:{
+    2:{0:'2026-02-18',1:'2026-02-18',2:'2026-02-19',3:'2026-02-19',4:'2026-02-20',5:'2026-02-20',6:'2026-02-23',7:'2026-02-23',8:'2026-02-24',9:'2026-02-24'},
+    3:{0:'2026-03-11',1:'2026-03-11',2:'2026-03-12',3:'2026-03-12',4:'2026-03-13',5:'2026-03-13',6:'2026-03-16',7:'2026-03-16',8:'2026-03-17',9:'2026-03-17'},
+    4:{0:'2026-04-13',1:'2026-04-13',2:'2026-04-14',3:'2026-04-14',4:'2026-04-15',5:'2026-04-15',6:'2026-04-16',7:'2026-04-16',8:'2026-04-17',9:'2026-04-17'},
+    5:{0:'2026-05-13',1:'2026-05-13',2:'2026-05-14',3:'2026-05-14',4:'2026-05-15',5:'2026-05-15',6:'2026-05-18',7:'2026-05-18',8:'2026-05-19',9:'2026-05-19'},
+    6:{0:'2026-06-15',1:'2026-06-15',2:'2026-06-16',3:'2026-06-16',4:'2026-06-17',5:'2026-06-17',6:'2026-06-18',7:'2026-06-18',8:'2026-06-19',9:'2026-06-19'},
+    7:{0:'2026-07-13',1:'2026-07-13',2:'2026-07-14',3:'2026-07-14',4:'2026-07-15',5:'2026-07-15',6:'2026-07-16',7:'2026-07-16',8:'2026-07-17',9:'2026-07-17'},
+    8:{0:'2026-08-13',1:'2026-08-13',2:'2026-08-14',3:'2026-08-14',4:'2026-08-17',5:'2026-08-17',6:'2026-08-18',7:'2026-08-18',8:'2026-08-19',9:'2026-08-19'},
+    9:{0:'2026-09-14',1:'2026-09-14',2:'2026-09-15',3:'2026-09-15',4:'2026-09-16',5:'2026-09-16',6:'2026-09-17',7:'2026-09-17',8:'2026-09-18',9:'2026-09-18'},
+    10:{0:'2026-10-13',1:'2026-10-13',2:'2026-10-14',3:'2026-10-14',4:'2026-10-15',5:'2026-10-15',6:'2026-10-16',7:'2026-10-16',8:'2026-10-19',9:'2026-10-19'},
+    11:{0:'2026-11-13',1:'2026-11-13',2:'2026-11-16',3:'2026-11-16',4:'2026-11-17',5:'2026-11-17',6:'2026-11-18',7:'2026-11-18',8:'2026-11-19',9:'2026-11-19'},
+    12:{0:'2026-12-14',1:'2026-12-14',2:'2026-12-15',3:'2026-12-15',4:'2026-12-16',5:'2026-12-16',6:'2026-12-17',7:'2026-12-17',8:'2026-12-18',9:'2026-12-18'}
   }
 };
 const MESES=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -1890,10 +1918,22 @@ const AFIP_TABS={
     key:'GANANCIAS_PJ', org:'ARCA',
     grupos:[{term:[0,1,2,3],label:'0-1-2-3'},{term:[4,5,6],label:'4-5-6'},{term:[7,8,9],label:'7-8-9'}]
   },
+  iibb_arba:{
+    titulo:'IIBB Local — ARBA (Provincia de Buenos Aires)',
+    sub:'Anticipos mensuales · Contribuyentes locales PBA · DDJJ Anual: abril 2026',
+    key:'IIBB_ARBA', org:'ARBA',
+    grupos:[{term:[0,1],label:'0 y 1'},{term:[2,3],label:'2 y 3'},{term:[4,5],label:'4 y 5'},{term:[6,7],label:'6 y 7'},{term:[8,9],label:'8 y 9'}]
+  },
+  iibb_agip:{
+    titulo:'IIBB Local — AGIP (CABA)',
+    sub:'Anticipos mensuales · Contribuyentes locales Ciudad de Buenos Aires',
+    key:'IIBB_AGIP', org:'AGIP',
+    grupos:[{term:[0,1],label:'0 y 1'},{term:[2,3],label:'2 y 3'},{term:[4,5],label:'4 y 5'},{term:[6,7],label:'6 y 7'},{term:[8,9],label:'8 y 9'}]
+  },
   iibb:{
-    titulo:'IIBB — Convenio Multilateral',
-    sub:'Anticipos mensuales · Comisión Arbitral (COMARB)',
-    key:'IIBB', org:'ARBA/COMARB',
+    titulo:'IIBB — Convenio Multilateral (COMARB)',
+    sub:'Anticipos mensuales · Contribuyentes de múltiples jurisdicciones · DDJJ Anual: 30/06/2026',
+    key:'IIBB', org:'COMARB',
     grupos:[{term:[0,1],label:'0 y 1'},{term:[2,3],label:'2 y 3'},{term:[4,5],label:'4 y 5'},{term:[6,7],label:'6 y 7'},{term:[8,9],label:'8 y 9'}]
   },
 };
@@ -1916,7 +1956,8 @@ function renderAfipTab(){
   document.getElementById('afip-tab-sub').textContent=cfg.sub;
 
   const meses=[1,2,3,4,5,6,7,8,9,10,11,12];
-  const orgBadge=`<span class="badge ${cfg.org==='ARCA'?'badge-afip':'badge-blue'}" style="font-size:9px">${cfg.org}</span>`;
+  const orgColor={'ARCA':'badge-afip','ARBA':'badge-blue','AGIP':'badge-accent','COMARB':'badge-blue'};
+  const orgBadge=`<span class="badge ${orgColor[cfg.org]||'badge-neutral'}" style="font-size:9px">${cfg.org}</span>`;
 
   const mesHoy=new Date().getMonth()+1;
   const anioHoy=new Date().getFullYear();
@@ -1967,8 +2008,8 @@ function renderAfipTab(){
         const esMiGrupo=g.term.includes(term);
         const fd=f?daysTo(f):null;
         const fp=fd!==null&&fd>=0&&fd<=7;
-        return`<td style="padding:9px 10px;text-align:center;${esMiGrupo?'font-weight:600;color:var(--accent)':''}">
-          ${f?`<span style="font-family:monospace;font-size:12px">${fmtDate(f)}</span>${fp&&esMiGrupo?` <span class="badge badge-warn" style="font-size:9px">En ${fd}d</span>`:''}`:'-'}
+        return`<td style="padding:9px 10px;text-align:center;">
+          ${f?`<span style="font-family:monospace;font-size:12px">${fmtDate(f)}</span>${fp?` <span class="badge badge-warn" style="font-size:9px">En ${fd}d</span>`:''}`:'-'}
         </td>`;
       }).join('')}
     </tr>`;
@@ -2841,10 +2882,7 @@ function renderDashboard(){
     const c=getCliente(v.cliente_id);const d=daysTo(v.fecha);
     return`<div class="venc-row"><div style="display:flex;align-items:center;gap:8px"><div class="venc-dot ${d<0?'dot-danger':d<=3?'dot-danger':d<=7?'dot-warn':'dot-ok'}"></div><div><div style="font-size:13px;font-weight:500">${v.tipo} — ${c.nombre||'?'} ${v.origen==='afip'?'<span class="badge badge-afip" style="font-size:9px">AFIP</span>':''}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(v.fecha)}</div></div></div>${vencBadge(v)}</div>`;
   }).join('');
-  const pends=db.cobros.filter(c=>c.estado!=='cobrado').sort((a,b)=>(a.vencimiento||'').localeCompare(b.vencimiento||'')).slice(0,5);
-  const dc=document.getElementById('dash-cobros');
-  if(!pends.length){dc.innerHTML='<div class="empty"><p>Sin cobros pendientes 🎉</p></div>';}
-  else dc.innerHTML=pends.map(cb=>{const c=getCliente(cb.cliente_id);return`<div class="venc-row"><div><div style="font-size:13px;font-weight:500">${c.nombre||'?'}</div><div style="font-size:11px;color:var(--text3)">${cb.concepto}</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:500">${fmt$(cb.importe)}</div>${cobroBadge(cb.estado)}</div></div>`;}).join('');
+
 }
 
 // ═══════════════════════════════════════════

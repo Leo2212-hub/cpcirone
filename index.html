@@ -457,28 +457,7 @@ textarea{height:80px;resize:vertical}
           <div id="afip-tab-tabla" class="table-wrap"></div>
         </div>
 
-        <div class="card" style="margin-bottom:1rem">
-          <div class="card-header"><div class="card-title">Accesos directos ARCA / AFIP</div></div>
-          <div class="afip-grid">
-            <a class="afip-link" href="https://auth.afip.gob.ar/contribuyente_/login.xhtml" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🔐 Clave Fiscal</div><div class="afip-link-desc">Acceso con CUIT y clave</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/vencimientosPortal/Default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📅 Vencimientos ARCA</div><div class="afip-link-desc">Calendario oficial 2026</div></a>
-            <a class="afip-link" href="https://www.afip.gob.ar/monotributo/acceso.asp" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📋 Monotributo</div><div class="afip-link-desc">Portal simplificado</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/IVA/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🧾 IVA en línea</div><div class="afip-link-desc">Declaración jurada</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/SIAP/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">💻 SIAP</div><div class="afip-link-desc">Sistema Integrado</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/produccion/ganancias4/default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">💰 Ganancias F.711</div><div class="afip-link-desc">DDJJ anual</div></a>
-            <a class="afip-link" href="https://www.comarb.gov.ar" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🏛 COMARB</div><div class="afip-link-desc">Convenio Multilateral</div></a>
-            <a class="afip-link" href="https://www.arba.gov.ar" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">🏛 ARBA</div><div class="afip-link-desc">Rentas Pcia. Bs As</div></a>
-            <a class="afip-link" href="https://serviciosweb.afip.gob.ar/genericos/constanciaInscripcion/Default.aspx" target="_blank" rel="noopener noreferrer"><div class="afip-link-title">📃 Constancia Inscripción</div><div class="afip-link-desc">Consulta y descarga</div></a>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Consulta rápida por CUIT</div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-            <div style="flex:1;min-width:200px"><label class="form-label">CUIT</label><input type="text" id="cuit-consulta" placeholder="20-12345678-9"></div>
-            <button class="btn btn-afip" onclick="consultarCuit()">Consultar en AFIP</button>
-            <button class="btn" onclick="window.open('https://serviciosweb.afip.gob.ar/genericos/constanciaInscripcion/Default.aspx','_blank')">Ver constancia</button>
-          </div>
-        </div>
+
       </div>
       <div class="section" id="s-conciliacion">
         <!-- PASO 1: CARGA -->
@@ -1939,8 +1918,10 @@ function renderAfipTab(){
   const meses=[1,2,3,4,5,6,7,8,9,10,11,12];
   const orgBadge=`<span class="badge ${cfg.org==='ARCA'?'badge-afip':'badge-blue'}" style="font-size:9px">${cfg.org}</span>`;
 
+  const mesHoy=new Date().getMonth()+1;
+  const anioHoy=new Date().getFullYear();
+
   if(cfg.unica){
-    // Fecha única para todas las terminaciones (Monotributo)
     let html=`<table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr><th style="text-align:left;padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Mes</th><th style="padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Vencimiento ${orgBadge}</th></tr></thead><tbody>`;
     meses.forEach(m=>{
@@ -1949,8 +1930,10 @@ function renderAfipTab(){
       const d=daysTo(f);
       const hoy=f===today();
       const proximo=d>=0&&d<=7;
-      html+=`<tr style="${hoy?'background:var(--danger-light)':proximo?'background:var(--warn-light)':''}">
-        <td style="padding:9px 10px;font-weight:500">${MESES[m]}</td>
+      const esPasado=m<mesHoy;
+      const esMesActual=m===mesHoy;
+      html+=`<tr style="${esPasado?'opacity:.35':''}${hoy?';background:var(--danger-light)':proximo?';background:var(--warn-light)':esMesActual?';background:var(--accent-light)':''}">
+        <td style="padding:9px 10px;font-weight:${esMesActual?'700':'500'};color:${esMesActual?'var(--accent)':'inherit'}">${MESES[m]}${esMesActual?' ←':''}</td>
         <td style="padding:9px 10px;text-align:center"><span style="font-family:monospace">${fmtDate(f)}</span> ${proximo&&!hoy?`<span class="badge badge-warn" style="font-size:10px">En ${d}d</span>`:hoy?'<span class="badge badge-danger" style="font-size:10px">Hoy</span>':''}</td>
       </tr>`;
     });
@@ -1975,8 +1958,10 @@ function renderAfipTab(){
     const d=miF?daysTo(miF):null;
     const proximo=d!==null&&d>=0&&d<=7;
     const hoy=miF===today();
-    html+=`<tr style="${hoy?'background:var(--danger-light)':proximo?'background:var(--warn-light)':''}">
-      <td style="padding:9px 10px;font-weight:${proximo||hoy?'600':'400'}">${MESES[m]}</td>
+    const esPasado=m<mesHoy;
+    const esMesActual=m===mesHoy;
+    html+=`<tr style="${esPasado?'opacity:.35':''}${hoy?';background:var(--danger-light)':proximo?';background:var(--warn-light)':esMesActual?';background:var(--accent-light)':''}">
+      <td style="padding:9px 10px;font-weight:${esMesActual?'700':proximo||hoy?'600':'400'};color:${esMesActual?'var(--accent)':'inherit'}">${MESES[m]}${esMesActual?' ←':''}</td>
       ${grupos.map(g=>{
         const f=getAfip(cfg.key,m,g.term[0]);
         const esMiGrupo=g.term.includes(term);

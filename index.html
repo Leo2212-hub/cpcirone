@@ -285,7 +285,7 @@ textarea{height:80px;resize:vertical}
         </div>
         <div class="two-col">
           <div class="card"><div class="card-header"><div><div class="card-title">Próximos vencimientos</div><div class="card-subtitle">Siguientes 15 días</div></div></div><div id="dash-venc"></div></div>
-          <div class="card"><div class="card-header"><div><div class="card-title">Cobros pendientes</div></div></div><div id="dash-cobros"></div></div>
+
         </div>
       </div>
       <div class="section" id="s-clientes">
@@ -399,7 +399,13 @@ textarea{height:80px;resize:vertical}
         </div>
       </div>
       <div class="section" id="s-cobros">
-        <div class="stats-grid" id="cobros-stats"></div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:6px">
+          <button onclick="toggleCobrosStats()" id="btn-toggle-stats" style="background:none;border:none;cursor:pointer;color:var(--text3);display:flex;align-items:center;gap:5px;font-size:12px;padding:4px 8px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
+            <svg id="stats-eye-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            Mostrar totales
+          </button>
+        </div>
+        <div class="stats-grid" id="cobros-stats" style="display:none"></div>
         <div class="card">
           <div class="card-header">
             <div class="tabs" style="margin-bottom:0">
@@ -1577,6 +1583,18 @@ async function guardarCobro(){
   closeModal('modal-cobro');renderCobros();renderAll();
 }
 function filterCobros(f,el){cobrosFiltro=f;document.querySelectorAll('#s-cobros .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderCobros();}
+let cobrosStatsVisible=false;
+function toggleCobrosStats(){
+  cobrosStatsVisible=!cobrosStatsVisible;
+  const el=document.getElementById('cobros-stats');
+  const btn=document.getElementById('btn-toggle-stats');
+  const icon=document.getElementById('stats-eye-icon');
+  el.style.display=cobrosStatsVisible?'grid':'none';
+  btn.innerHTML=cobrosStatsVisible
+    ?`<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Ocultar totales`
+    :`<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Mostrar totales`;
+}
+
 function renderCobros(){
   populateSelects();
   const fC=document.getElementById('filter-cobros-cliente')?.value||'';

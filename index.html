@@ -754,17 +754,7 @@ textarea{height:80px;resize:vertical}
     </div>
     <div class="form-row"><label class="form-label">Notas</label><textarea id="mc-notas"></textarea></div>
 
-    <!-- Toggle compartido -->
-    <div style="margin:1rem 0;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius);border:1px solid #c5d8ee;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:13px;font-weight:500;color:var(--blue)">Compartido con socio</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">Ambos usuarios pueden ver y editar este cliente y todos sus datos</div>
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="mc-compartido" style="width:auto;accent-color:var(--blue)">
-        <span style="font-size:12px;color:var(--blue);font-weight:500">Compartir</span>
-      </label>
-    </div>
+    <!-- Accesos del cliente -->
     <div id="mc-accesos-section" style="display:none">
       <div style="border-top:1px solid var(--border);margin:1.25rem 0 1rem"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
@@ -1318,16 +1308,10 @@ async function loadAll(){
       sb.from('cobros').select('*').order('created_at', {ascending:false}),
       sb.from('accesos').select('*').order('created_at', {ascending:false})
     ]), 12000, 'Tiempo de carga agotado');
-    // Clientes: los propios + los compartidos
-    const allClientes = r1.data || [];
-    db.clientes = allClientes.filter(c => c.created_by === currentUser.id || c.compartido);
-
-    // IDs de clientes visibles para filtrar el resto
-    const clienteIds = new Set(db.clientes.map(c => c.id));
-
-    db.vencimientos = (r2.data || []).filter(v => clienteIds.has(v.cliente_id));
-    db.cobros       = (r3.data || []).filter(c => clienteIds.has(c.cliente_id));
-    db.accesos      = (r4.data || []).filter(a => clienteIds.has(a.cliente_id));
+    db.clientes  = r1.data || [];
+    db.vencimientos = r2.data || [];
+    db.cobros    = r3.data || [];
+    db.accesos   = r4.data || [];
 
     // Enriquecer accesos con nombre del usuario que los cargó
     const userIds=[...new Set(db.accesos.map(a=>a.created_by).filter(Boolean))];
@@ -1476,7 +1460,6 @@ function openModalCliente(id){
   document.getElementById('mc-agente-ret').checked=!!(c?.agente_retencion);
   document.getElementById('mc-agente-perc-gan').checked=!!(c?.agente_percepcion_ganancias);
   document.getElementById('mc-agente-perc').checked=!!(c?.agente_percepcion);
-  document.getElementById('mc-compartido').checked=!!(c?.compartido);
   // Mostrar accesos solo si es edición
   const accSection=document.getElementById('mc-accesos-section');
   if(id){
@@ -1521,7 +1504,7 @@ async function guardarCliente(){
   if(!nombre){toast('El nombre es obligatorio');return;}
   const btn=document.getElementById('btn-guardar-cliente');btn.disabled=true;
   setSyncing(true);
-  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion_ganancias:document.getElementById('mc-agente-perc-gan').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,compartido:document.getElementById('mc-compartido').checked,created_by:currentUser.id};
+  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion_ganancias:document.getElementById('mc-agente-perc-gan').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,created_by:currentUser.id};
   let res;
   if(editId){res=await sb.from('clientes').update(data).eq('id',editId).select().single();}
   else{res=await sb.from('clientes').insert(data).select().single();}
@@ -1541,7 +1524,7 @@ function renderClientes(){
   if(!list.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
   tb.innerHTML=list.map(c=>`<tr>
-    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(c.nombre)}</div><div><div style="font-weight:500;display:flex;align-items:center;gap:6px">${c.nombre}${c.compartido?'<span class="badge badge-blue" style="font-size:10px" title="Compartido con socio">👥 Compartido</span>':''}</div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${iiBBBadge(c)}</div></div></div></td>
+    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(c.nombre)}</div><div><div style="font-weight:500">${c.nombre}</div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${iiBBBadge(c)}</div></div></div></td>
     <td style="color:var(--text2);font-family:monospace;font-size:12px">${c.cuit||'—'}</td>
     <td>${catBadge(c.categoria)}</td>
     <td style="color:var(--text2)">${c.email||'—'}</td>
@@ -3447,24 +3430,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementB
  CREATE TRIGGER on_auth_user_created
    AFTER INSERT ON auth.users
    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-/*
- ═══════════════════════════════════════════════════════════════════
- SQL PARA CLIENTES COMPARTIDOS — ejecutar en Supabase SQL Editor
- ═══════════════════════════════════════════════════════════════════
-
- -- 1. Agregar columna compartido a la tabla clientes
- ALTER TABLE clientes ADD COLUMN IF NOT EXISTS compartido BOOLEAN DEFAULT false;
-
- -- 2. Actualizar políticas RLS para que cada usuario vea
- --    sus propios clientes Y los compartidos
- DROP POLICY IF EXISTS "clientes_select" ON clientes;
- CREATE POLICY "clientes_select" ON clientes
-   FOR SELECT TO authenticated
-   USING (created_by = auth.uid() OR compartido = true);
-
- -- Insert/Update/Delete siguen siendo para todos los autenticados
- -- (ya configurado en el paso anterior de RLS)
-
  ═══════════════════════════════════════════════════════════════════
 */
 </script>

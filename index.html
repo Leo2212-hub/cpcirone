@@ -238,6 +238,10 @@ textarea{height:80px;resize:vertical}
       <button class="nav-item" onclick="nav('afip',this)" style="color:var(--afip)">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>AFIP / Accesos
       </button>
+      <div class="nav-sep"></div>
+      <button class="nav-item" id="nav-estudio" onclick="nav('estudio',this)" style="color:var(--text2)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>Mi Estudio
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="user-tag" style="margin-bottom:8px">
@@ -379,17 +383,46 @@ textarea{height:80px;resize:vertical}
       </div>
 
       <div class="section" id="s-vencimientos">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
-          <div class="tabs">
-            <button class="tab active" onclick="filterVenc('todos',this)">Todos</button>
-            <button class="tab" onclick="filterVenc('pendiente',this)">Pendientes</button>
-            <button class="tab" onclick="filterVenc('completado',this)">Completados</button>
+        <!-- Fila 1: Mensuales / Anuales -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:8px">
+          <div class="tabs" style="margin-bottom:0">
+            <button class="tab active" id="venc-grupo-tab-mensual" onclick="filterVencGrupo('mensual',this)">📅 Mensuales</button>
+            <button class="tab" id="venc-grupo-tab-anual" onclick="filterVencGrupo('anual',this)">📆 Anuales</button>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <select id="filter-venc-cliente" onchange="renderVencimientos()" style="width:auto;font-size:12px;max-width:180px"><option value="">Todos los clientes</option></select>
             <select id="filter-venc-tipo" onchange="renderVencimientos()" style="width:auto;font-size:12px">
-              <option value="">Todos los tipos</option><option>IVA mensual</option><option>Ganancias</option><option>Ingresos Brutos</option><option>Balance anual</option><option>Monotributo</option><option>Otro</option>
+              <option value="">Todos los tipos</option>
+              <optgroup label="── Mensuales ──">
+                <option>IVA mensual</option>
+                <option>Monotributo</option>
+                <option>IIBB — Local</option>
+                <option>IIBB — Convenio Multilateral</option>
+                <option>IIBB — Régimen Simplificado</option>
+                <option>IIBB — Agente de percepción</option>
+                <option>SICORE — Retención Ganancias</option>
+                <option>SICORE — Percepción Ganancias</option>
+                <option>Autónomos</option>
+                <option>Cargas Sociales F.931</option>
+                <option>Otro</option>
+              </optgroup>
+              <optgroup label="── Anuales ──">
+                <option>Ganancias — DDJJ Anual</option>
+                <option>Bienes Personales — DDJJ Anual</option>
+                <option>Ganancias PJ — DDJJ Anual</option>
+                <option>IIBB — DDJJ Anual ARBA</option>
+                <option>IIBB — DDJJ Anual Conv. Multilateral</option>
+                <option>Balance anual</option>
+              </optgroup>
             </select>
+          </div>
+        </div>
+        <!-- Fila 2: Todos / Pendientes / Completados -->
+        <div style="margin-bottom:1rem">
+          <div class="tabs" style="margin-bottom:0;width:fit-content">
+            <button class="tab active" id="venc-estado-tab-todos" onclick="filterVenc('todos',this)">Todos</button>
+            <button class="tab" id="venc-estado-tab-pendiente" onclick="filterVenc('pendiente',this)">Pendientes</button>
+            <button class="tab" id="venc-estado-tab-completado" onclick="filterVenc('completado',this)">Completados</button>
           </div>
         </div>
         <div id="alert-venc"></div>
@@ -427,7 +460,24 @@ textarea{height:80px;resize:vertical}
         <div class="card"><div class="card-header"><div class="card-title">Resumen de cobros</div></div><div id="rep-cobros-resumen"></div></div>
       </div>
       <div class="section" id="s-afip">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;justify-content:space-between">
+
+        <!-- Selector de grupo: Mensuales / Anuales -->
+        <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between">
+          <div class="tabs" style="margin-bottom:0">
+            <button class="tab active" id="afip-grupo-mensual" onclick="setAfipGrupo('mensual',this)">📅 Mensuales</button>
+            <button class="tab" id="afip-grupo-anual" onclick="setAfipGrupo('anual',this)">📆 Anuales</button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="afip-term" onchange="renderAfipTab()" style="width:auto;font-size:12px">
+              <option value="0">Term. 0</option><option value="1">Term. 1</option><option value="2">Term. 2</option>
+              <option value="3">Term. 3</option><option value="4">Term. 4</option><option value="5" selected>Term. 5</option>
+              <option value="6">Term. 6</option><option value="7">Term. 7</option><option value="8">Term. 8</option><option value="9">Term. 9</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sub-tabs mensuales -->
+        <div id="afip-subtabs-mensual" style="margin-bottom:1rem">
           <div class="tabs" style="margin-bottom:0;flex-wrap:wrap">
             <button class="tab active" onclick="setAfipTab('iva',this)">IVA / RI</button>
             <button class="tab" onclick="setAfipTab('mono',this)">Monotributo</button>
@@ -439,12 +489,16 @@ textarea{height:80px;resize:vertical}
             <button class="tab" onclick="setAfipTab('iibb_agip',this)">IIBB AGIP</button>
             <button class="tab" onclick="setAfipTab('iibb',this)">IIBB Conv. ML</button>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="afip-term" onchange="renderAfipTab()" style="width:auto;font-size:12px">
-              <option value="0">Term. 0</option><option value="1">Term. 1</option><option value="2">Term. 2</option>
-              <option value="3">Term. 3</option><option value="4">Term. 4</option><option value="5" selected>Term. 5</option>
-              <option value="6">Term. 6</option><option value="7">Term. 7</option><option value="8">Term. 8</option><option value="9">Term. 9</option>
-            </select>
+        </div>
+
+        <!-- Sub-tabs anuales -->
+        <div id="afip-subtabs-anual" style="display:none;margin-bottom:1rem">
+          <div class="tabs" style="margin-bottom:0;flex-wrap:wrap">
+            <button class="tab active" onclick="setAfipTab('ganancias_anual',this)">Ganancias PH</button>
+            <button class="tab" onclick="setAfipTab('bienes_anual',this)">Bienes Personales</button>
+            <button class="tab" onclick="setAfipTab('ganancias_pj_anual',this)">Ganancias PJ</button>
+            <button class="tab" onclick="setAfipTab('iibb_arba_anual',this)">IIBB Anual ARBA</button>
+            <button class="tab" onclick="setAfipTab('iibb_cm_anual',this)">IIBB Anual Conv. ML</button>
           </div>
         </div>
 
@@ -458,7 +512,6 @@ textarea{height:80px;resize:vertical}
           </div>
           <div id="afip-tab-tabla" class="table-wrap"></div>
         </div>
-
 
       </div>
       <div class="section" id="s-conciliacion">
@@ -632,11 +685,66 @@ textarea{height:80px;resize:vertical}
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Cliente</th><th>Servicio</th><th>CUIT / Usuario</th><th>Contraseña</th><th>Notas</th><th></th></tr></thead>
+              <thead><tr><th>Cliente</th><th>Servicio</th><th>CUIT / Usuario</th><th>Contraseña</th><th>Notas</th><th>Cargado por</th><th></th></tr></thead>
               <tbody id="tabla-accesos"></tbody>
             </table>
           </div>
           <div id="empty-accesos" class="empty" style="display:none"><p>No hay accesos guardados. Agregá el primero.</p></div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN: MI ESTUDIO -->
+      <div class="section" id="s-estudio">
+        <div class="card" style="max-width:580px">
+          <div class="card-header">
+            <div><div class="card-title">Mi Estudio</div><div class="card-subtitle">Usuarios y acceso compartido</div></div>
+          </div>
+
+          <!-- Usuario actual -->
+          <div style="margin-bottom:1.5rem">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Tu cuenta</div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border)">
+              <div class="avatar" style="width:36px;height:36px;font-size:13px" id="estudio-mi-avatar">?</div>
+              <div style="flex:1">
+                <div style="font-weight:500;font-size:13px" id="estudio-mi-nombre">—</div>
+                <div style="font-size:12px;color:var(--text3)" id="estudio-mi-email">—</div>
+              </div>
+              <span class="badge badge-accent">Admin</span>
+            </div>
+          </div>
+
+          <!-- Socio vinculado -->
+          <div style="margin-bottom:1.5rem">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Socio vinculado</div>
+            <div id="estudio-socio-container">
+              <div class="empty" style="padding:1.5rem;border:1px dashed var(--border);border-radius:var(--radius)">
+                <p style="font-size:13px">Sin socio vinculado aún</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Invitar socio (solo admin) -->
+          <div id="estudio-invitar-section">
+            <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Vincular socio por email</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">El socio debe tener una cuenta creada en este sistema. Ingresá su email exacto para vincularlo.</div>
+            <div style="display:flex;gap:8px">
+              <input type="email" id="estudio-socio-email" placeholder="socio@estudio.com" style="flex:1;font-size:13px">
+              <button class="btn btn-primary" onclick="vincularSocio()">Vincular</button>
+            </div>
+            <div id="estudio-vincular-error" style="font-size:12px;color:var(--danger);margin-top:6px;display:none"></div>
+          </div>
+
+        </div>
+
+        <!-- Info compartir -->
+        <div class="card" style="max-width:580px;margin-top:1rem">
+          <div class="card-header"><div class="card-title" style="font-size:15px">¿Cómo funciona el acceso compartido?</div></div>
+          <div style="font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:8px;line-height:1.6">
+            <div>📋 Cada usuario ve solo <strong>sus propios clientes</strong> por defecto.</div>
+            <div>👥 Al activar <strong>"Compartido con socio"</strong> en la ficha de un cliente, ambos pueden verlo y editarlo.</div>
+            <div>📅 Las tareas, cobros y accesos de un cliente compartido también son visibles para el socio.</div>
+            <div>🔒 Los clientes no compartidos son completamente privados para cada usuario.</div>
+          </div>
         </div>
       </div>
 
@@ -705,7 +813,17 @@ textarea{height:80px;resize:vertical}
     </div>
     <div class="form-row"><label class="form-label">Notas</label><textarea id="mc-notas"></textarea></div>
 
-    <!-- Accesos del cliente -->
+    <!-- Toggle compartido -->
+    <div style="margin:1rem 0;padding:12px 14px;background:var(--blue-light);border-radius:var(--radius);border:1px solid #c5d8ee;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--blue)">Compartido con socio</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Ambos usuarios pueden ver y editar este cliente y todos sus datos</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="mc-compartido" style="width:auto;accent-color:var(--blue)">
+        <span style="font-size:12px;color:var(--blue);font-weight:500">Compartir</span>
+      </label>
+    </div>
     <div id="mc-accesos-section" style="display:none">
       <div style="border-top:1px solid var(--border);margin:1.25rem 0 1rem"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
@@ -773,15 +891,23 @@ textarea{height:80px;resize:vertical}
       <div class="form-row">
         <label class="form-label">Tipo de tarea *</label>
         <select id="mit-tipo" onchange="renderImportTareaClientes()">
-          <option value="IVA mensual">IVA mensual — RI</option>
-          <option value="IIBB — Convenio Multilateral">IIBB — Convenio Multilateral</option>
-          <option value="IIBB — Local">IIBB — Local</option>
-          <option value="IIBB — Régimen Simplificado">IIBB — Régimen Simplificado</option>
-          <option value="Monotributo">Monotributo</option>
-          <option value="SICORE — Retención Ganancias">SICORE — Retención Ganancias</option>
-          <option value="SICORE — Percepción Ganancias">SICORE — Percepción Ganancias</option>
-          <option value="Ganancias">Ganancias DDJJ Anual</option>
-          <option value="Bienes Personales">Bienes Personales DDJJ</option>
+          <optgroup label="── Mensuales ──">
+            <option value="IVA mensual">IVA mensual — RI</option>
+            <option value="IIBB — Convenio Multilateral">IIBB — Convenio Multilateral</option>
+            <option value="IIBB — Local">IIBB — Local</option>
+            <option value="IIBB — Régimen Simplificado">IIBB — Régimen Simplificado</option>
+            <option value="Monotributo">Monotributo</option>
+            <option value="SICORE — Retención Ganancias">SICORE — Retención Ganancias</option>
+            <option value="SICORE — Percepción Ganancias">SICORE — Percepción Ganancias</option>
+            <option value="IIBB — Agente de percepción">IIBB — Agente de percepción</option>
+          </optgroup>
+          <optgroup label="── Anuales ──">
+            <option value="Ganancias — DDJJ Anual">Ganancias — DDJJ Anual (junio)</option>
+            <option value="Bienes Personales — DDJJ Anual">Bienes Personales — DDJJ Anual (junio)</option>
+            <option value="Ganancias PJ — DDJJ Anual">Ganancias PJ — DDJJ Anual (mayo)</option>
+            <option value="IIBB — DDJJ Anual ARBA">IIBB — DDJJ Anual ARBA (abril)</option>
+            <option value="IIBB — DDJJ Anual Conv. Multilateral">IIBB — DDJJ Anual Conv. Multilateral (junio)</option>
+          </optgroup>
         </select>
       </div>
       <div class="form-row">
@@ -803,6 +929,38 @@ textarea{height:80px;resize:vertical}
     </div>
   </div>
 </div>
+
+<!-- MODAL: GENERAR MES COMPLETO -->
+<div class="modal-bg" id="modal-mes-completo">
+  <div class="modal" style="width:660px">
+    <div class="modal-title">📅 Generar mes completo</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem">Genera automáticamente todos los vencimientos AFIP de todos los clientes activos para el mes seleccionado.</div>
+    <div class="form-grid" style="margin-bottom:1rem">
+      <div class="form-row">
+        <label class="form-label">Mes *</label>
+        <select id="mmc-mes" onchange="previsualizarMesCompleto()">
+          <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+          <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div class="form-row" style="display:flex;align-items:flex-end">
+        <div id="mmc-resumen-header" style="font-size:12px;color:var(--text2);padding:9px 12px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);width:100%">—</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">
+      Vista previa — tareas a generar <span id="mmc-count" style="color:var(--accent)"></span>
+    </div>
+    <div id="mmc-lista" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg)"></div>
+    <div id="mmc-aviso-sin-cuit" style="display:none;margin-top:.75rem;padding:8px 12px;background:var(--warn-light);color:var(--warn);border-radius:var(--radius);font-size:12px;border:1px solid #e6c26a"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-mes-completo')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-generar-mes" onclick="ejecutarMesCompleto()">Generar todas las tareas</button>
+    </div>
+  </div>
+</div>
+
 <div id="excel-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center">
   <div style="background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;width:700px;max-width:95vw;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -851,20 +1009,20 @@ const AFIP={
     11:{0:'2026-11-18',1:'2026-11-18',2:'2026-11-19',3:'2026-11-19',4:'2026-11-20',5:'2026-11-20',6:'2026-11-23',7:'2026-11-23',8:'2026-11-24',9:'2026-11-24'},
     12:{0:'2026-12-18',1:'2026-12-18',2:'2026-12-21',3:'2026-12-21',4:'2026-12-22',5:'2026-12-22',6:'2026-12-23',7:'2026-12-23',8:'2026-12-28',9:'2026-12-28'}
   },
-  // Ingresos Brutos — Convenio Multilateral, primera quincena mes siguiente
+  // IIBB — Convenio Multilateral (CM03/CM04) — agrupado 0-1-2 / 3-4-5 / 6-7 / 8-9
+  // Fuente: calendariofiscal.com.ar verificado 2026
   IIBB:{
-    1:{0:'2026-01-13',1:'2026-01-13',2:'2026-01-14',3:'2026-01-14',4:'2026-01-15',5:'2026-01-15',6:'2026-01-16',7:'2026-01-16',8:'2026-01-19',9:'2026-01-19'},
-    2:{0:'2026-02-13',1:'2026-02-13',2:'2026-02-16',3:'2026-02-16',4:'2026-02-17',5:'2026-02-17',6:'2026-02-18',7:'2026-02-18',8:'2026-02-19',9:'2026-02-19'},
-    3:{0:'2026-03-13',1:'2026-03-13',2:'2026-03-16',3:'2026-03-16',4:'2026-03-17',5:'2026-03-17',6:'2026-03-18',7:'2026-03-18',8:'2026-03-19',9:'2026-03-19'},
-    4:{0:'2026-04-13',1:'2026-04-13',2:'2026-04-14',3:'2026-04-14',4:'2026-04-15',5:'2026-04-15',6:'2026-04-16',7:'2026-04-16',8:'2026-04-17',9:'2026-04-17'},
-    5:{0:'2026-05-13',1:'2026-05-13',2:'2026-05-14',3:'2026-05-14',4:'2026-05-15',5:'2026-05-15',6:'2026-05-18',7:'2026-05-18',8:'2026-05-19',9:'2026-05-19'},
-    6:{0:'2026-06-15',1:'2026-06-15',2:'2026-06-16',3:'2026-06-16',4:'2026-06-17',5:'2026-06-17',6:'2026-06-18',7:'2026-06-18',8:'2026-06-19',9:'2026-06-19'},
-    7:{0:'2026-07-13',1:'2026-07-13',2:'2026-07-14',3:'2026-07-14',4:'2026-07-15',5:'2026-07-15',6:'2026-07-16',7:'2026-07-16',8:'2026-07-17',9:'2026-07-17'},
-    8:{0:'2026-08-13',1:'2026-08-13',2:'2026-08-14',3:'2026-08-14',4:'2026-08-17',5:'2026-08-17',6:'2026-08-18',7:'2026-08-18',8:'2026-08-19',9:'2026-08-19'},
-    9:{0:'2026-09-14',1:'2026-09-14',2:'2026-09-15',3:'2026-09-15',4:'2026-09-16',5:'2026-09-16',6:'2026-09-17',7:'2026-09-17',8:'2026-09-18',9:'2026-09-18'},
-    10:{0:'2026-10-13',1:'2026-10-13',2:'2026-10-14',3:'2026-10-14',4:'2026-10-15',5:'2026-10-15',6:'2026-10-16',7:'2026-10-16',8:'2026-10-19',9:'2026-10-19'},
-    11:{0:'2026-11-13',1:'2026-11-13',2:'2026-11-16',3:'2026-11-16',4:'2026-11-17',5:'2026-11-17',6:'2026-11-18',7:'2026-11-18',8:'2026-11-19',9:'2026-11-19'},
-    12:{0:'2026-12-14',1:'2026-12-14',2:'2026-12-15',3:'2026-12-15',4:'2026-12-16',5:'2026-12-16',6:'2026-12-17',7:'2026-12-17',8:'2026-12-18',9:'2026-12-18'}
+    1:{0:'2026-02-13',1:'2026-02-13',2:'2026-02-13',3:'2026-02-18',4:'2026-02-18',5:'2026-02-18',6:'2026-02-19',7:'2026-02-19',8:'2026-02-20',9:'2026-02-20'},
+    2:{0:'2026-03-13',1:'2026-03-13',2:'2026-03-13',3:'2026-03-18',4:'2026-03-18',5:'2026-03-18',6:'2026-03-19',7:'2026-03-19',8:'2026-03-20',9:'2026-03-20'},
+    3:{0:'2026-04-13',1:'2026-04-13',2:'2026-04-13',3:'2026-04-20',4:'2026-04-20',5:'2026-04-20',6:'2026-04-21',7:'2026-04-21',8:'2026-04-22',9:'2026-04-22'},
+    4:{0:'2026-05-13',1:'2026-05-13',2:'2026-05-13',3:'2026-05-18',4:'2026-05-18',5:'2026-05-18',6:'2026-05-19',7:'2026-05-19',8:'2026-05-20',9:'2026-05-20'},
+    5:{0:'2026-06-15',1:'2026-06-15',2:'2026-06-15',3:'2026-06-18',4:'2026-06-18',5:'2026-06-18',6:'2026-06-19',7:'2026-06-19',8:'2026-06-22',9:'2026-06-22'},
+    6:{0:'2026-07-13',1:'2026-07-13',2:'2026-07-13',3:'2026-07-20',4:'2026-07-20',5:'2026-07-20',6:'2026-07-21',7:'2026-07-21',8:'2026-07-22',9:'2026-07-22'},
+    7:{0:'2026-08-13',1:'2026-08-13',2:'2026-08-13',3:'2026-08-18',4:'2026-08-18',5:'2026-08-18',6:'2026-08-19',7:'2026-08-19',8:'2026-08-20',9:'2026-08-20'},
+    8:{0:'2026-09-14',1:'2026-09-14',2:'2026-09-14',3:'2026-09-18',4:'2026-09-18',5:'2026-09-18',6:'2026-09-21',7:'2026-09-21',8:'2026-09-22',9:'2026-09-22'},
+    9:{0:'2026-10-13',1:'2026-10-13',2:'2026-10-13',3:'2026-10-19',4:'2026-10-19',5:'2026-10-19',6:'2026-10-20',7:'2026-10-20',8:'2026-10-21',9:'2026-10-21'},
+    10:{0:'2026-11-13',1:'2026-11-13',2:'2026-11-13',3:'2026-11-18',4:'2026-11-18',5:'2026-11-18',6:'2026-11-19',7:'2026-11-19',8:'2026-11-20',9:'2026-11-20'},
+    11:{0:'2026-12-14',1:'2026-12-14',2:'2026-12-14',3:'2026-12-18',4:'2026-12-18',5:'2026-12-18',6:'2026-12-21',7:'2026-12-21',8:'2026-12-22',9:'2026-12-22'}
   },
   // Ganancias personas humanas — DDJJ anual período fiscal 2025, vence junio 2026
   // Term 0-3: 11/jun, Term 4-6: 12/jun, Term 7-9: 16/jun
@@ -951,18 +1109,20 @@ const AFIP={
     11:{0:'2026-11-13',1:'2026-11-13',2:'2026-11-13',3:'2026-11-13',4:'2026-11-16',5:'2026-11-16',6:'2026-11-16',7:'2026-11-17',8:'2026-11-17',9:'2026-11-17'},
     12:{0:'2026-12-14',1:'2026-12-14',2:'2026-12-14',3:'2026-12-14',4:'2026-12-15',5:'2026-12-15',6:'2026-12-15',7:'2026-12-16',8:'2026-12-16',9:'2026-12-16'}
   },
+  // IIBB ARBA — Contribuyentes locales, anticipo mensual
+  // Fuente: web.arba.gov.ar/vencimientos-contribuyentes-locales (oficial 2026)
   IIBB_ARBA:{
-    2:{0:'2026-02-23',1:'2026-02-23',2:'2026-02-24',3:'2026-02-24',4:'2026-02-25',5:'2026-02-25',6:'2026-02-26',7:'2026-02-26',8:'2026-02-27',9:'2026-02-27'},
-    3:{0:'2026-03-25',1:'2026-03-25',2:'2026-03-26',3:'2026-03-26',4:'2026-03-27',5:'2026-03-27',6:'2026-03-30',7:'2026-03-30',8:'2026-03-31',9:'2026-03-31'},
-    4:{0:'2026-04-20',1:'2026-04-20',2:'2026-04-21',3:'2026-04-21',4:'2026-04-22',5:'2026-04-22',6:'2026-04-23',7:'2026-04-23',8:'2026-04-24',9:'2026-04-24'},
-    5:{0:'2026-05-18',1:'2026-05-18',2:'2026-05-19',3:'2026-05-19',4:'2026-05-20',5:'2026-05-20',6:'2026-05-21',7:'2026-05-21',8:'2026-05-22',9:'2026-05-22'},
-    6:{0:'2026-06-22',1:'2026-06-22',2:'2026-06-23',3:'2026-06-23',4:'2026-06-24',5:'2026-06-24',6:'2026-06-25',7:'2026-06-25',8:'2026-06-26',9:'2026-06-26'},
-    7:{0:'2026-07-20',1:'2026-07-20',2:'2026-07-21',3:'2026-07-21',4:'2026-07-22',5:'2026-07-22',6:'2026-07-23',7:'2026-07-23',8:'2026-07-24',9:'2026-07-24'},
-    8:{0:'2026-08-24',1:'2026-08-24',2:'2026-08-25',3:'2026-08-25',4:'2026-08-26',5:'2026-08-26',6:'2026-08-27',7:'2026-08-27',8:'2026-08-28',9:'2026-08-28'},
-    9:{0:'2026-09-21',1:'2026-09-21',2:'2026-09-22',3:'2026-09-22',4:'2026-09-23',5:'2026-09-23',6:'2026-09-24',7:'2026-09-24',8:'2026-09-25',9:'2026-09-25'},
-    10:{0:'2026-10-19',1:'2026-10-19',2:'2026-10-20',3:'2026-10-20',4:'2026-10-21',5:'2026-10-21',6:'2026-10-22',7:'2026-10-22',8:'2026-10-23',9:'2026-10-23'},
-    11:{0:'2026-11-24',1:'2026-11-24',2:'2026-11-25',3:'2026-11-25',4:'2026-11-26',5:'2026-11-26',6:'2026-11-27',7:'2026-11-27',8:'2026-11-30',9:'2026-11-30'},
-    12:{0:'2026-12-21',1:'2026-12-21',2:'2026-12-22',3:'2026-12-22',4:'2026-12-23',5:'2026-12-23',6:'2026-12-28',7:'2026-12-28',8:'2026-12-29',9:'2026-12-29'}
+    1:{0:'2026-02-23',1:'2026-02-23',2:'2026-02-24',3:'2026-02-24',4:'2026-02-25',5:'2026-02-25',6:'2026-02-26',7:'2026-02-26',8:'2026-02-27',9:'2026-02-27'},
+    2:{0:'2026-03-25',1:'2026-03-25',2:'2026-03-26',3:'2026-03-26',4:'2026-03-27',5:'2026-03-27',6:'2026-03-30',7:'2026-03-30',8:'2026-03-31',9:'2026-03-31'},
+    3:{0:'2026-04-20',1:'2026-04-20',2:'2026-04-21',3:'2026-04-21',4:'2026-04-22',5:'2026-04-22',6:'2026-04-23',7:'2026-04-23',8:'2026-04-24',9:'2026-04-24'},
+    4:{0:'2026-05-18',1:'2026-05-18',2:'2026-05-19',3:'2026-05-19',4:'2026-05-20',5:'2026-05-20',6:'2026-05-21',7:'2026-05-21',8:'2026-05-22',9:'2026-05-22'},
+    5:{0:'2026-06-22',1:'2026-06-22',2:'2026-06-23',3:'2026-06-23',4:'2026-06-24',5:'2026-06-24',6:'2026-06-25',7:'2026-06-25',8:'2026-06-26',9:'2026-06-26'},
+    6:{0:'2026-07-20',1:'2026-07-20',2:'2026-07-21',3:'2026-07-21',4:'2026-07-22',5:'2026-07-22',6:'2026-07-23',7:'2026-07-23',8:'2026-07-24',9:'2026-07-24'},
+    7:{0:'2026-08-24',1:'2026-08-24',2:'2026-08-25',3:'2026-08-25',4:'2026-08-26',5:'2026-08-26',6:'2026-08-27',7:'2026-08-27',8:'2026-08-28',9:'2026-08-28'},
+    8:{0:'2026-09-21',1:'2026-09-21',2:'2026-09-22',3:'2026-09-22',4:'2026-09-23',5:'2026-09-23',6:'2026-09-24',7:'2026-09-24',8:'2026-09-25',9:'2026-09-25'},
+    9:{0:'2026-10-19',1:'2026-10-19',2:'2026-10-20',3:'2026-10-20',4:'2026-10-21',5:'2026-10-21',6:'2026-10-22',7:'2026-10-22',8:'2026-10-23',9:'2026-10-23'},
+    10:{0:'2026-11-24',1:'2026-11-24',2:'2026-11-25',3:'2026-11-25',4:'2026-11-26',5:'2026-11-26',6:'2026-11-27',7:'2026-11-27',8:'2026-11-30',9:'2026-11-30'},
+    11:{0:'2026-12-21',1:'2026-12-21',2:'2026-12-22',3:'2026-12-22',4:'2026-12-23',5:'2026-12-23',6:'2026-12-28',7:'2026-12-28',8:'2026-12-29',9:'2026-12-29'}
   },
   IIBB_AGIP:{
     2:{0:'2026-02-18',1:'2026-02-18',2:'2026-02-19',3:'2026-02-19',4:'2026-02-20',5:'2026-02-20',6:'2026-02-23',7:'2026-02-23',8:'2026-02-24',9:'2026-02-24'},
@@ -976,11 +1136,44 @@ const AFIP={
     10:{0:'2026-10-13',1:'2026-10-13',2:'2026-10-14',3:'2026-10-14',4:'2026-10-15',5:'2026-10-15',6:'2026-10-16',7:'2026-10-16',8:'2026-10-19',9:'2026-10-19'},
     11:{0:'2026-11-13',1:'2026-11-13',2:'2026-11-16',3:'2026-11-16',4:'2026-11-17',5:'2026-11-17',6:'2026-11-18',7:'2026-11-18',8:'2026-11-19',9:'2026-11-19'},
     12:{0:'2026-12-14',1:'2026-12-14',2:'2026-12-15',3:'2026-12-15',4:'2026-12-16',5:'2026-12-16',6:'2026-12-17',7:'2026-12-17',8:'2026-12-18',9:'2026-12-18'}
+  },
+
+  // ══════════════════════════════════════════════
+  // VENCIMIENTOS ANUALES
+  // ══════════════════════════════════════════════
+
+  // IIBB Anual ARBA — DDJJ período fiscal 2025
+  // Fuente: web.arba.gov.ar/vencimientos-contribuyentes-locales (oficial)
+  // Term 0-1: 20/abr | 2-3: 21/abr | 4-5: 22/abr | 6-7: 23/abr | 8-9: 24/abr
+  IIBB_ARBA_ANUAL:{
+    4:{0:'2026-04-20',1:'2026-04-20',2:'2026-04-21',3:'2026-04-21',4:'2026-04-22',5:'2026-04-22',6:'2026-04-23',7:'2026-04-23',8:'2026-04-24',9:'2026-04-24'}
+  },
+
+  // IIBB Anual Conv. Multilateral — DDJJ anual vence 30/06/2026 (fecha única)
+  IIBB_CM_ANUAL:{
+    6:{0:'2026-06-30',1:'2026-06-30',2:'2026-06-30',3:'2026-06-30',4:'2026-06-30',5:'2026-06-30',6:'2026-06-30',7:'2026-06-30',8:'2026-06-30',9:'2026-06-30'}
+  },
+
+  // Ganancias DDJJ Anual Personas Humanas — período fiscal 2025, vence junio 2026
+  // Term 0-3: 11/jun | Term 4-6: 12/jun | Term 7-9: 16/jun  (igual que GANANCIAS mensual)
+  GANANCIAS_ANUAL:{
+    6:{0:'2026-06-11',1:'2026-06-11',2:'2026-06-11',3:'2026-06-11',4:'2026-06-12',5:'2026-06-12',6:'2026-06-12',7:'2026-06-16',8:'2026-06-16',9:'2026-06-16'}
+  },
+
+  // Bienes Personales DDJJ Anual — mismo esquema junio 2026
+  BIENES_ANUAL:{
+    6:{0:'2026-06-11',1:'2026-06-11',2:'2026-06-11',3:'2026-06-11',4:'2026-06-12',5:'2026-06-12',6:'2026-06-12',7:'2026-06-16',8:'2026-06-16',9:'2026-06-16'}
+  },
+
+  // Ganancias DDJJ Anual Personas Jurídicas — cierre ejercicio dic 2025
+  // Term 0-3: 13/may | Term 4-6: 14/may | Term 7-9: 15/may
+  GANANCIAS_PJ_ANUAL:{
+    5:{0:'2026-05-13',1:'2026-05-13',2:'2026-05-13',3:'2026-05-13',4:'2026-05-14',5:'2026-05-14',6:'2026-05-14',7:'2026-05-15',8:'2026-05-15',9:'2026-05-15'}
   }
 };
 const MESES=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-function termCuit(cuit){const c=(cuit||'').replace(/\D/g,'');return c.length>=11?parseInt(c[c.length-2]):null;}
+function termCuit(cuit){const c=(cuit||'').replace(/\D/g,'');return c.length>=11?parseInt(c[c.length-1]):null;}
 function getAfip(key,mes,term){const t=AFIP[key];return(t&&t[mes]&&term!==null)?t[mes][term]||null:null;}
 function generarSugs(cliente,mes){
   const t=termCuit(cliente.cuit),cat=cliente.categoria,s=[];
@@ -991,47 +1184,64 @@ function generarSugs(cliente,mes){
 
   // ── ARCA / AFIP ────────────────────────────────────
   if(cat==='Responsable Inscripto'){
-    const f1=getAfip('IVA_RI',mes,t);if(f1)s.push({tipo:'IVA mensual',fecha:f1,org:'ARCA'});
+    const f1=getAfip('IVA_RI',mes,t);if(f1)s.push({tipo:'IVA mensual',fecha:f1,org:'ARCA',anual:false});
     if(mes===6){
-      const f3=getAfip('GANANCIAS',mes,t);if(f3)s.push({tipo:'Ganancias',fecha:f3,org:'ARCA'});
-      const f4=getAfip('BIENES',mes,t);if(f4)s.push({tipo:'Bienes Personales',fecha:f4,org:'ARCA'});
+      const f3=getAfip('GANANCIAS_ANUAL',mes,t);if(f3)s.push({tipo:'Ganancias — DDJJ Anual',fecha:f3,org:'ARCA',anual:true});
+      const f4=getAfip('BIENES_ANUAL',mes,t);if(f4)s.push({tipo:'Bienes Personales — DDJJ Anual',fecha:f4,org:'ARCA',anual:true});
+    }
+    if(mes===5){
+      const f5=getAfip('GANANCIAS_PJ_ANUAL',mes,t);if(f5)s.push({tipo:'Ganancias PJ — DDJJ Anual',fecha:f5,org:'ARCA',anual:true});
     }
   }else if(cat==='Monotributo'){
-    const f1=getAfip('MONO',mes,t);if(f1)s.push({tipo:'Monotributo',fecha:f1,org:'ARCA'});
+    const f1=getAfip('MONO',mes,t);if(f1)s.push({tipo:'Monotributo',fecha:f1,org:'ARCA',anual:false});
+    if(mes===6){
+      const f3=getAfip('GANANCIAS_ANUAL',mes,t);if(f3)s.push({tipo:'Ganancias — DDJJ Anual',fecha:f3,org:'ARCA',anual:true});
+      const f4=getAfip('BIENES_ANUAL',mes,t);if(f4)s.push({tipo:'Bienes Personales — DDJJ Anual',fecha:f4,org:'ARCA',anual:true});
+    }
   }
 
-  // ── IIBB según régimen ─────────────────────────────
+  // ── IIBB mensual según régimen ─────────────────────
   if(iibb==='local'||iibb==='cm'){
-    // Convenio Multilateral y Local usan el mismo calendario base de IIBB
     const f2=getAfip('IIBB',mes,t);
     if(f2){
       const label=iibb==='cm'?'IIBB — Convenio Multilateral':'IIBB — Local';
-      s.push({tipo:label,fecha:f2,org:'ARBA'});
+      s.push({tipo:label,fecha:f2,org:'ARBA',anual:false});
     }
   }else if(iibb==='simplificado'){
-    // Régimen Simplificado: vencimiento fijo día 10 del mes siguiente (ajuste si finde)
-    // Usamos mismo calendario IIBB como aproximación; la fecha exacta varía por jurisdicción
     const f2=getAfip('IIBB',mes,t);
-    if(f2)s.push({tipo:'IIBB — Régimen Simplificado',fecha:f2,org:'ARBA'});
+    if(f2)s.push({tipo:'IIBB — Régimen Simplificado',fecha:f2,org:'ARBA',anual:false});
   }
-  // iibb==='' → No contribuyente → no se agrega vencimiento de IIBB
+
+  // ── IIBB DDJJ Anual ────────────────────────────────
+  if(iibb==='local'||iibb==='simplificado'){
+    if(mes===4){
+      const fa=getAfip('IIBB_ARBA_ANUAL',mes,t);
+      if(fa)s.push({tipo:'IIBB — DDJJ Anual ARBA',fecha:fa,org:'ARBA',anual:true});
+    }
+  }
+  if(iibb==='cm'){
+    if(mes===6){
+      const fa=getAfip('IIBB_CM_ANUAL',mes,t);
+      if(fa)s.push({tipo:'IIBB — DDJJ Anual Conv. Multilateral',fecha:fa,org:'COMARB',anual:true});
+    }
+  }
 
   // ── Agente de retención SICORE (Ganancias — ARCA) ──
   // Vence días 9/10/11 del mes siguiente según terminación CUIT
   if(esAgRet){
     const f=getAfip('SICORE',mes,t);
-    if(f)s.push({tipo:'SICORE — Retención Ganancias',fecha:f,org:'ARCA'});
+    if(f)s.push({tipo:'SICORE — Retención Ganancias',fecha:f,org:'ARCA',anual:false});
   }
   // ── Agente de percepción Ganancias SICORE (ARCA) ───
   const esAgPercGan=!!(cliente.agente_percepcion_ganancias);
   if(esAgPercGan){
     const f=getAfip('SICORE',mes,t);
-    if(f)s.push({tipo:'SICORE — Percepción Ganancias',fecha:f,org:'ARCA'});
+    if(f)s.push({tipo:'SICORE — Percepción Ganancias',fecha:f,org:'ARCA',anual:false});
   }
   // ── Agente de percepción IIBB (ARBA) ───────────────
   if(esAgPerc){
     const f=getAfip('IIBB',mes,t);
-    if(f)s.push({tipo:'IIBB — Agente de percepción',fecha:f,org:'ARBA'});
+    if(f)s.push({tipo:'IIBB — Agente de percepción',fecha:f,org:'ARBA',anual:false});
   }
 
   return s;
@@ -1041,7 +1251,7 @@ function generarSugs(cliente,mes){
 // STATE
 // ═══════════════════════════════════════════
 let db={clientes:[],vencimientos:[],cobros:[],accesos:[]};
-let currentUser=null,editId=null,vencFiltro='todos',cobrosFiltro='todos';
+let currentUser=null,editId=null,vencFiltro='todos',vencGrupoFiltro='mensual',cobrosFiltro='todos';
 let sugsImportar=[],sugsClienteId='';
 
 // ═══════════════════════════════════════════
@@ -1167,10 +1377,31 @@ async function loadAll(){
       sb.from('cobros').select('*').order('created_at', {ascending:false}),
       sb.from('accesos').select('*').order('created_at', {ascending:false})
     ]), 12000, 'Tiempo de carga agotado');
-    db.clientes  = r1.data || [];
-    db.vencimientos = r2.data || [];
-    db.cobros    = r3.data || [];
-    db.accesos   = r4.data || [];
+    // Clientes: los propios + los compartidos
+    const allClientes = r1.data || [];
+    db.clientes = allClientes.filter(c => c.created_by === currentUser.id || c.compartido);
+
+    // IDs de clientes visibles para filtrar el resto
+    const clienteIds = new Set(db.clientes.map(c => c.id));
+
+    db.vencimientos = (r2.data || []).filter(v => clienteIds.has(v.cliente_id));
+    db.cobros       = (r3.data || []).filter(c => clienteIds.has(c.cliente_id));
+    db.accesos      = (r4.data || []).filter(a => clienteIds.has(a.cliente_id));
+
+    // Enriquecer accesos con nombre del usuario que los cargó
+    const userIds=[...new Set(db.accesos.map(a=>a.created_by).filter(Boolean))];
+    if(userIds.length){
+      try{
+        const {data:profiles}=await sb.from('user_profiles').select('id,name').in('id',userIds);
+        if(profiles){
+          const map={};profiles.forEach(p=>{map[p.id]=p.name;});
+          db.accesos=db.accesos.map(a=>({...a,created_by_name:map[a.created_by]||(a.created_by===currentUser?.id?(currentUser.user_metadata?.name||currentUser.email?.split('@')[0]):null)}));
+        }
+      }catch(e){
+        // Si no existe la tabla user_profiles, enriquecer solo con el usuario actual
+        db.accesos=db.accesos.map(a=>({...a,created_by_name:a.created_by===currentUser?.id?(currentUser.user_metadata?.name||currentUser.email?.split('@')[0]):null}));
+      }
+    }
   } catch(e) {
     console.error('Error en loadAll:', e);
     db.clientes = db.clientes || [];
@@ -1211,8 +1442,8 @@ document.addEventListener('visibilitychange', () => {
 // ═══════════════════════════════════════════
 // NAV
 // ═══════════════════════════════════════════
-const PT={inicio:'Inicio',clientes:'Clientes','ficha-cliente':'Cliente',vencimientos:'Vencimientos',cobros:'Cobros',reportes:'Reportes',accesos:'Accesos',afip:'AFIP / Accesos',conciliacion:'Conciliación'};
-const PS={inicio:'Resumen del día',clientes:'Cartera de clientes','ficha-cliente':'Ficha completa',vencimientos:'Calendario de tareas',cobros:'Honorarios y pagos',reportes:'Análisis',accesos:'Claves y contraseñas por cliente',afip:'Calendario oficial + accesos directos',conciliacion:'Cruzá tus facturas PDF contra el reporte de AFIP'};
+const PT={inicio:'Inicio',clientes:'Clientes','ficha-cliente':'Cliente',vencimientos:'Vencimientos',cobros:'Cobros',reportes:'Reportes',accesos:'Accesos',afip:'AFIP / Accesos',conciliacion:'Conciliación',estudio:'Mi Estudio'};
+const PS={inicio:'Resumen del día',clientes:'Cartera de clientes','ficha-cliente':'Ficha completa',vencimientos:'Calendario de tareas',cobros:'Honorarios y pagos',reportes:'Análisis',accesos:'Claves y contraseñas por cliente',afip:'Calendario oficial + accesos directos',conciliacion:'Cruzá tus facturas PDF contra el reporte de AFIP',estudio:'Usuarios y acceso compartido'};
 function nav(page,el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1221,7 +1452,7 @@ function nav(page,el){
   document.getElementById('page-title').textContent=PT[page];
   document.getElementById('page-sub').textContent=PS[page];
   renderTopbarActions(page);
-  const fn={inicio:renderDashboard,clientes:renderClientes,'ficha-cliente':()=>{},vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,accesos:renderAccesos,afip:renderAfip,conciliacion:()=>{}};
+  const fn={inicio:renderDashboard,clientes:renderClientes,'ficha-cliente':()=>{},vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,accesos:renderAccesos,afip:renderAfip,conciliacion:()=>{},estudio:renderEstudio};
   if(fn[page])fn[page]();
 }
 function renderTopbarActions(page){
@@ -1229,7 +1460,7 @@ function renderTopbarActions(page){
   const map={
     clientes:`<button class="btn btn-primary" onclick="openModalCliente()">+ Nuevo cliente</button>`,
     accesos:`<button class="btn btn-primary" onclick="openModalAcceso()">+ Nuevo acceso</button>`,
-    vencimientos:`<button class="btn btn-afip btn-sm" onclick="nav('afip',document.querySelectorAll('.nav-item')[5])">↗ AFIP</button><button class="btn" onclick="openModalImportTarea()">⚡ Importar por tarea</button><button class="btn btn-primary" onclick="openModalVenc()">+ Nueva tarea</button>`,
+    vencimientos:`<button class="btn btn-afip btn-sm" onclick="nav('afip',document.querySelectorAll('.nav-item')[5])">↗ AFIP</button><button class="btn" onclick="openModalImportTarea()">⚡ Importar por tarea</button><button class="btn" onclick="openModalMesCompleto()" style="background:var(--accent-light);color:var(--accent);border-color:var(--accent)">📅 Generar mes completo</button><button class="btn btn-primary" onclick="openModalVenc()">+ Nueva tarea</button>`,
     cobros:`<button class="btn btn-primary" onclick="openModalCobro()">+ Registrar cobro</button>`,
     inicio:'',reportes:'',afip:''
   };
@@ -1304,6 +1535,7 @@ function openModalCliente(id){
   document.getElementById('mc-agente-ret').checked=!!(c?.agente_retencion);
   document.getElementById('mc-agente-perc-gan').checked=!!(c?.agente_percepcion_ganancias);
   document.getElementById('mc-agente-perc').checked=!!(c?.agente_percepcion);
+  document.getElementById('mc-compartido').checked=!!(c?.compartido);
   // Mostrar accesos solo si es edición
   const accSection=document.getElementById('mc-accesos-section');
   if(id){
@@ -1348,7 +1580,7 @@ async function guardarCliente(){
   if(!nombre){toast('El nombre es obligatorio');return;}
   const btn=document.getElementById('btn-guardar-cliente');btn.disabled=true;
   setSyncing(true);
-  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion_ganancias:document.getElementById('mc-agente-perc-gan').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,created_by:currentUser.id};
+  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion_ganancias:document.getElementById('mc-agente-perc-gan').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,compartido:document.getElementById('mc-compartido').checked,created_by:currentUser.id};
   let res;
   if(editId){res=await sb.from('clientes').update(data).eq('id',editId).select().single();}
   else{res=await sb.from('clientes').insert(data).select().single();}
@@ -1368,7 +1600,7 @@ function renderClientes(){
   if(!list.length){tb.innerHTML='';em.style.display='block';return;}
   em.style.display='none';
   tb.innerHTML=list.map(c=>`<tr>
-    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(c.nombre)}</div><div><div style="font-weight:500">${c.nombre}</div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${iiBBBadge(c)}</div></div></div></td>
+    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(c.nombre)}</div><div><div style="font-weight:500;display:flex;align-items:center;gap:6px">${c.nombre}${c.compartido?'<span class="badge badge-blue" style="font-size:10px" title="Compartido con socio">👥 Compartido</span>':''}</div><div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap">${iiBBBadge(c)}</div></div></div></td>
     <td style="color:var(--text2);font-family:monospace;font-size:12px">${c.cuit||'—'}</td>
     <td>${catBadge(c.categoria)}</td>
     <td style="color:var(--text2)">${c.email||'—'}</td>
@@ -1456,7 +1688,36 @@ async function guardarVencimiento(){
   toast(editId?'Tarea actualizada ✓':'Tarea agregada ✓');
   closeModal('modal-venc');renderVencimientos();renderAll();
 }
-function filterVenc(f,el){vencFiltro=f;document.querySelectorAll('#s-vencimientos .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderVencimientos();}
+// Tipos que se consideran anuales automáticamente
+const TIPOS_ANUALES=new Set([
+  'Ganancias — DDJJ Anual',
+  'Bienes Personales — DDJJ Anual',
+  'Ganancias PJ — DDJJ Anual',
+  'IIBB — DDJJ Anual ARBA',
+  'IIBB — DDJJ Anual Conv. Multilateral',
+  'Balance anual',
+  // compatibilidad con tipos anteriores que pudieran estar en la BD
+  'Ganancias',
+  'Bienes Personales',
+]);
+function esVencAnual(v){return TIPOS_ANUALES.has(v.tipo);}
+
+function filterVencGrupo(grupo,el){
+  vencGrupoFiltro=grupo;
+  document.querySelectorAll('#s-vencimientos .tabs:first-of-type .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderVencimientos();
+}
+
+function filterVenc(f,el){
+  vencFiltro=f;
+  // Solo desactivar tabs del grupo de estado (segunda fila)
+  ['venc-estado-tab-todos','venc-estado-tab-pendiente','venc-estado-tab-completado'].forEach(id=>{
+    const t=document.getElementById(id);if(t)t.classList.remove('active');
+  });
+  if(el)el.classList.add('active');
+  renderVencimientos();
+}
 function renderVencimientos(){
   populateSelects();
   const fC=document.getElementById('filter-venc-cliente')?.value||'';
@@ -1466,6 +1727,9 @@ function renderVencimientos(){
   if(vencFiltro==='completado')list=list.filter(v=>v.estado==='completado');
   if(fC)list=list.filter(v=>v.cliente_id===fC);
   if(fT)list=list.filter(v=>v.tipo===fT);
+  // Filtro Mensuales / Anuales
+  if(vencGrupoFiltro==='anual')list=list.filter(v=>esVencAnual(v));
+  else if(vencGrupoFiltro==='mensual')list=list.filter(v=>!esVencAnual(v));
   const urg=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=3).length;
   document.getElementById('alert-venc').innerHTML=urg>0?`<div class="alert alert-danger">⚠ ${urg} tarea${urg>1?'s':''} con vencimiento en menos de 3 días.</div>`:'';
   const pend=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=7).length;
@@ -1817,6 +2081,7 @@ function renderAccesos(){
         </div>
       </td>
       <td style="color:var(--text3);font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.notas||'—'}</td>
+      <td style="font-size:11px;color:var(--text3);white-space:nowrap">${a.created_by_name?`<span title="${a.created_by||''}">${a.created_by_name}</span>`:(a.created_by===currentUser?.id?'<span style="color:var(--accent)">Yo</span>':'<span>—</span>')}</td>
       <td><div style="display:flex;gap:4px">
         <button class="action-btn" onclick="copiarPass('${(a.password||'').replace(/'/g,"\'")}','${a.servicio}')" title="Copiar contraseña">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -1932,17 +2197,72 @@ const AFIP_TABS={
   },
   iibb:{
     titulo:'IIBB — Convenio Multilateral (COMARB)',
-    sub:'Anticipos mensuales · Contribuyentes de múltiples jurisdicciones · DDJJ Anual: 30/06/2026',
+    sub:'Anticipo mensual CM03/CM04 · Grupos: 0-1-2 / 3-4-5 / 6-7 / 8-9 · DDJJ Anual: 30/06/2026',
     key:'IIBB', org:'COMARB',
+    grupos:[{term:[0,1,2],label:'0-1-2'},{term:[3,4,5],label:'3-4-5'},{term:[6,7],label:'6-7'},{term:[8,9],label:'8-9'}]
+  },
+
+  // ── ANUALES ────────────────────────────────────────
+  ganancias_anual:{
+    titulo:'Ganancias — DDJJ Anual Personas Humanas',
+    sub:'Período fiscal 2025 · Vencimiento junio 2026 según terminación CUIT',
+    key:'GANANCIAS_ANUAL', org:'ARCA', anual:true,
+    grupos:[{term:[0,1,2,3],label:'0-1-2-3'},{term:[4,5,6],label:'4-5-6'},{term:[7,8,9],label:'7-8-9'}]
+  },
+  bienes_anual:{
+    titulo:'Bienes Personales — DDJJ Anual',
+    sub:'Período fiscal 2025 · Vencimiento junio 2026 según terminación CUIT',
+    key:'BIENES_ANUAL', org:'ARCA', anual:true,
+    grupos:[{term:[0,1,2,3],label:'0-1-2-3'},{term:[4,5,6],label:'4-5-6'},{term:[7,8,9],label:'7-8-9'}]
+  },
+  ganancias_pj_anual:{
+    titulo:'Ganancias — DDJJ Anual Personas Jurídicas',
+    sub:'Cierre ejercicio diciembre 2025 · Vencimiento mayo 2026',
+    key:'GANANCIAS_PJ_ANUAL', org:'ARCA', anual:true,
+    grupos:[{term:[0,1,2,3],label:'0-1-2-3'},{term:[4,5,6],label:'4-5-6'},{term:[7,8,9],label:'7-8-9'}]
+  },
+  iibb_arba_anual:{
+    titulo:'IIBB — DDJJ Anual ARBA (Provincia de Buenos Aires)',
+    sub:'Período fiscal 2025 · Vencimiento abril 2026 según terminación CUIT',
+    key:'IIBB_ARBA_ANUAL', org:'ARBA', anual:true,
     grupos:[{term:[0,1],label:'0 y 1'},{term:[2,3],label:'2 y 3'},{term:[4,5],label:'4 y 5'},{term:[6,7],label:'6 y 7'},{term:[8,9],label:'8 y 9'}]
+  },
+  iibb_cm_anual:{
+    titulo:'IIBB — DDJJ Anual Convenio Multilateral (COMARB)',
+    sub:'Período fiscal 2025 · Vencimiento único 30/06/2026 para todas las terminaciones',
+    key:'IIBB_CM_ANUAL', org:'COMARB', anual:true, unica:true
   },
 };
 
 let afipTabActual='iva';
+let afipGrupoActual='mensual';
+
+function setAfipGrupo(grupo, el){
+  afipGrupoActual=grupo;
+  document.querySelectorAll('#s-afip .tabs:first-child .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  const esMensual=grupo==='mensual';
+  document.getElementById('afip-subtabs-mensual').style.display=esMensual?'block':'none';
+  document.getElementById('afip-subtabs-anual').style.display=esMensual?'none':'block';
+  // Activar primer tab del grupo correspondiente
+  if(esMensual){
+    afipTabActual='iva';
+    const firstTab=document.querySelector('#afip-subtabs-mensual .tab');
+    document.querySelectorAll('#afip-subtabs-mensual .tab').forEach(t=>t.classList.remove('active'));
+    if(firstTab)firstTab.classList.add('active');
+  }else{
+    afipTabActual='ganancias_anual';
+    const firstTab=document.querySelector('#afip-subtabs-anual .tab');
+    document.querySelectorAll('#afip-subtabs-anual .tab').forEach(t=>t.classList.remove('active'));
+    if(firstTab)firstTab.classList.add('active');
+  }
+  renderAfipTab();
+}
 
 function setAfipTab(tab, el){
   afipTabActual=tab;
-  document.querySelectorAll('#s-afip .tab').forEach(t=>t.classList.remove('active'));
+  // Limpiar activo en ambos grupos de subtabs
+  document.querySelectorAll('#afip-subtabs-mensual .tab, #afip-subtabs-anual .tab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
   renderAfipTab();
 }
@@ -1962,6 +2282,69 @@ function renderAfipTab(){
   const mesHoy=new Date().getMonth()+1;
   const anioHoy=new Date().getFullYear();
 
+  // Tabs anuales: mostrar solo los meses con datos, con diseño destacado
+  if(cfg.anual){
+    const orgBadgeAnual=`<span class="badge ${orgColor[cfg.org]||'badge-neutral'}" style="font-size:10px">${cfg.org}</span>`;
+
+    // Caso unica (fecha igual para todos los terminaciones)
+    if(cfg.unica){
+      const mesesConDatos=meses.filter(m=>getAfip(cfg.key,m,0));
+      let html=`<div style="padding:1rem 0">`;
+      mesesConDatos.forEach(m=>{
+        const f=getAfip(cfg.key,m,0);
+        const d=daysTo(f);
+        const hoy=f===today();
+        const proximo=d>=0&&d<=7;
+        html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px;background:${hoy?'var(--danger-light)':proximo?'var(--warn-light)':'var(--accent-light)'};border-radius:var(--radius-lg);border:1px solid ${hoy?'#f5c6c2':proximo?'#e6c26a':'var(--accent)'};margin-bottom:8px">
+          <div style="font-size:28px">📆</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:15px;color:var(--accent)">${MESES[m]} 2026</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">Fecha única para todas las terminaciones ${orgBadgeAnual}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:monospace;font-size:18px;font-weight:700">${fmtDate(f)}</div>
+            ${hoy?'<span class="badge badge-danger">Vence hoy</span>':proximo?`<span class="badge badge-warn">En ${d} días</span>`:d<0?`<span class="badge badge-neutral" style="opacity:.6">Vencido</span>`:'<span class="badge badge-ok">Vigente</span>'}
+          </div>
+        </div>`;
+      });
+      html+=`</div>`;
+      document.getElementById('afip-tab-tabla').innerHTML=html;
+      return;
+    }
+
+    // Caso con grupos de terminaciones
+    const grupos=cfg.grupos;
+    const mesesConDatos=meses.filter(m=>grupos.some(g=>getAfip(cfg.key,m,g.term[0])));
+    let html=`<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr>
+        <th style="text-align:left;padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Período</th>
+        ${grupos.map(g=>`<th style="padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);text-align:center">Term. ${g.label} ${orgBadgeAnual}</th>`).join('')}
+      </tr></thead><tbody>`;
+    mesesConDatos.forEach(m=>{
+      const miTerm=grupos.find(g=>g.term.includes(term));
+      const miF=miTerm?getAfip(cfg.key,m,term):null;
+      const d=miF?daysTo(miF):null;
+      const proximo=d!==null&&d>=0&&d<=7;
+      const hoy=miF===today();
+      html+=`<tr style="${hoy?';background:var(--danger-light)':proximo?';background:var(--warn-light)':';background:var(--accent-light)'}">
+        <td style="padding:12px 10px;font-weight:700;color:var(--accent);font-size:14px">${MESES[m]} 2026 <span class="badge badge-accent" style="font-size:9px;margin-left:4px">ANUAL</span></td>
+        ${grupos.map(g=>{
+          const f=getAfip(cfg.key,m,g.term[0]);
+          const fd=f?daysTo(f):null;
+          const fp=fd!==null&&fd>=0&&fd<=7;
+          const fhoy=f===today();
+          return`<td style="padding:12px 10px;text-align:center;">
+            ${f?`<span style="font-family:monospace;font-size:13px;font-weight:600">${fmtDate(f)}</span>${fhoy?' <span class="badge badge-danger" style="font-size:9px">Hoy</span>':fp?` <span class="badge badge-warn" style="font-size:9px">En ${fd}d</span>`:fd!==null&&fd<0?` <span class="badge badge-neutral" style="font-size:9px;opacity:.6">Vencido</span>`:''}`:'-'}
+          </td>`;
+        }).join('')}
+      </tr>`;
+    });
+    html+='</tbody></table>';
+    document.getElementById('afip-tab-tabla').innerHTML=html;
+    return;
+  }
+
+  // Tabs mensuales con fecha única para todas las terminaciones (ej: Monotributo)
   if(cfg.unica){
     let html=`<table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr><th style="text-align:left;padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Mes</th><th style="padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Vencimiento ${orgBadge}</th></tr></thead><tbody>`;
@@ -2483,15 +2866,21 @@ function limpiarConciliacion(){
 // ═══════════════════════════════════════════
 // Mapea tipo de tarea → qué clientes aplican y qué calendario usar
 const TAREA_CONFIG={
-  'IVA mensual':          {afipKey:'IVA_RI',   org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto'},
-  'IIBB — Convenio Multilateral': {afipKey:'IIBB', org:'ARBA', filtro:c=>c.iibb_regimen==='cm'},
-  'IIBB — Local':         {afipKey:'IIBB',     org:'ARBA', filtro:c=>c.iibb_regimen==='local'},
-  'IIBB — Régimen Simplificado':  {afipKey:'IIBB', org:'ARBA', filtro:c=>c.iibb_regimen==='simplificado'},
-  'Monotributo':          {afipKey:'MONO',     org:'ARCA', filtro:c=>c.categoria==='Monotributo'},
-  'SICORE — Retención Ganancias': {afipKey:'SICORE',org:'ARCA', filtro:c=>!!(c.agente_retencion)},
-  'SICORE — Percepción Ganancias':{afipKey:'SICORE',org:'ARCA', filtro:c=>!!(c.agente_percepcion_ganancias)},
-  'Ganancias':            {afipKey:'GANANCIAS',org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6},
-  'Bienes Personales':    {afipKey:'BIENES',   org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6},
+  // ── Mensuales ──
+  'IVA mensual':                     {afipKey:'IVA_RI',          org:'ARCA',   filtro:c=>c.categoria==='Responsable Inscripto'},
+  'IIBB — Convenio Multilateral':    {afipKey:'IIBB',            org:'COMARB', filtro:c=>c.iibb_regimen==='cm'},
+  'IIBB — Local':                    {afipKey:'IIBB',            org:'ARBA',   filtro:c=>c.iibb_regimen==='local'},
+  'IIBB — Régimen Simplificado':     {afipKey:'IIBB',            org:'ARBA',   filtro:c=>c.iibb_regimen==='simplificado'},
+  'Monotributo':                     {afipKey:'MONO',            org:'ARCA',   filtro:c=>c.categoria==='Monotributo'},
+  'SICORE — Retención Ganancias':    {afipKey:'SICORE',          org:'ARCA',   filtro:c=>!!(c.agente_retencion)},
+  'SICORE — Percepción Ganancias':   {afipKey:'SICORE',          org:'ARCA',   filtro:c=>!!(c.agente_percepcion_ganancias)},
+  'IIBB — Agente de percepción':     {afipKey:'IIBB',            org:'ARBA',   filtro:c=>!!(c.agente_percepcion)},
+  // ── Anuales ──
+  'Ganancias — DDJJ Anual':          {afipKey:'GANANCIAS_ANUAL', org:'ARCA',   filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6,  anual:true},
+  'Bienes Personales — DDJJ Anual':  {afipKey:'BIENES_ANUAL',   org:'ARCA',   filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6,  anual:true},
+  'Ganancias PJ — DDJJ Anual':       {afipKey:'GANANCIAS_PJ_ANUAL',org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto', soloMes:5, anual:true},
+  'IIBB — DDJJ Anual ARBA':          {afipKey:'IIBB_ARBA_ANUAL', org:'ARBA',   filtro:c=>c.iibb_regimen==='local'||c.iibb_regimen==='simplificado', soloMes:4, anual:true},
+  'IIBB — DDJJ Anual Conv. Multilateral':{afipKey:'IIBB_CM_ANUAL',org:'COMARB',filtro:c=>c.iibb_regimen==='cm', soloMes:6, anual:true},
 };
 
 function openModalImportTarea(){
@@ -2582,6 +2971,128 @@ async function ejecutarImportTarea(){
   db.vencimientos.push(...res.data);
   toast(`${res.data.length} vencimiento${res.data.length>1?'s':''} importado${res.data.length>1?'s':''} ✓`);
   closeModal('modal-import-tarea');
+  renderVencimientos();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════
+// GENERAR MES COMPLETO
+// ═══════════════════════════════════════════
+function openModalMesCompleto(){
+  document.getElementById('mmc-mes').value=String(new Date().getMonth()+1);
+  previsualizarMesCompleto();
+  openModal('modal-mes-completo');
+}
+
+function previsualizarMesCompleto(){
+  const mes=parseInt(document.getElementById('mmc-mes').value);
+  const clientes=db.clientes.filter(c=>c.estado==='Activo');
+
+  // Para cada cliente activo, generar todas sus sugerencias del mes
+  const todas=[];
+  const sinCuit=[];
+
+  clientes.forEach(c=>{
+    const t=termCuit(c.cuit||'');
+    if(t===null){sinCuit.push(c.nombre);return;}
+    const sugs=generarSugs(c,mes);
+    sugs.forEach(s=>{
+      const existe=db.vencimientos.some(v=>v.cliente_id===c.id&&v.tipo===s.tipo&&v.fecha===s.fecha);
+      todas.push({cliente:c,tipo:s.tipo,fecha:s.fecha,org:s.org,existe});
+    });
+  });
+
+  const nuevas=todas.filter(x=>!x.existe);
+  const yaExisten=todas.filter(x=>x.existe).length;
+
+  // Resumen header
+  document.getElementById('mmc-resumen-header').innerHTML=
+    `<strong>${nuevas.length}</strong> tareas nuevas · <span style="color:var(--text3)">${yaExisten} ya cargadas (se omiten)</span> · <span style="color:var(--text3)">${clientes.length} clientes activos</span>`;
+  document.getElementById('mmc-count').textContent=`(${nuevas.length})`;
+
+  // Aviso sin CUIT
+  const avisoEl=document.getElementById('mmc-aviso-sin-cuit');
+  if(sinCuit.length){
+    avisoEl.style.display='block';
+    avisoEl.innerHTML=`⚠️ <strong>${sinCuit.length} cliente${sinCuit.length>1?'s':''} sin CUIT</strong> — no se pueden generar sus vencimientos: ${sinCuit.join(', ')}`;
+  }else{
+    avisoEl.style.display='none';
+  }
+
+  // Botón
+  document.getElementById('btn-generar-mes').disabled=nuevas.length===0;
+
+  if(!nuevas.length){
+    document.getElementById('mmc-lista').innerHTML=
+      '<div class="empty" style="padding:1.5rem"><p>Todos los vencimientos de este mes ya están cargados.</p></div>';
+    return;
+  }
+
+  // Agrupar por cliente para mejor lectura
+  const porCliente={};
+  nuevas.forEach(x=>{
+    if(!porCliente[x.cliente.id])porCliente[x.cliente.id]={cliente:x.cliente,tareas:[]};
+    porCliente[x.cliente.id].tareas.push(x);
+  });
+
+  document.getElementById('mmc-lista').innerHTML=Object.values(porCliente).map(g=>`
+    <div style="padding:10px 12px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${initials(g.cliente.nombre)}</div>
+        <span style="font-weight:500;font-size:13px">${g.cliente.nombre}</span>
+        <span style="font-size:11px;color:var(--text3)">${g.cliente.cuit||''}</span>
+        <span class="badge badge-neutral" style="font-size:10px;margin-left:auto">${g.tareas.length} tarea${g.tareas.length>1?'s':''}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;padding-left:32px">
+        ${g.tareas.map(t=>{
+          const orgColor=t.org==='ARBA'?'badge-blue':t.org==='COMARB'?'badge-blue':'badge-afip';
+          return`<span class="badge ${orgColor}" style="font-size:10px">${t.tipo} · ${fmtDate(t.fecha)}</span>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+async function ejecutarMesCompleto(){
+  const mes=parseInt(document.getElementById('mmc-mes').value);
+  const clientes=db.clientes.filter(c=>c.estado==='Activo');
+  const nuevos=[];
+
+  clientes.forEach(c=>{
+    const t=termCuit(c.cuit||'');
+    if(t===null)return;
+    const sugs=generarSugs(c,mes);
+    sugs.forEach(s=>{
+      const existe=db.vencimientos.some(v=>v.cliente_id===c.id&&v.tipo===s.tipo&&v.fecha===s.fecha);
+      if(!existe)nuevos.push({
+        cliente_id:c.id,tipo:s.tipo,fecha:s.fecha,
+        estado:'pendiente',responsable:'',
+        notas:`Generado mes completo — ${MESES[mes]} 2026`,
+        origen:'afip',created_by:currentUser.id
+      });
+    });
+  });
+
+  if(!nuevos.length){toast('No hay vencimientos nuevos para generar');return;}
+
+  const btn=document.getElementById('btn-generar-mes');
+  btn.disabled=true;btn.textContent='Generando...';
+  setSyncing(true);
+
+  // Insertar en lotes de 50 para no exceder límites
+  const loteSize=50;
+  let insertados=0;
+  for(let i=0;i<nuevos.length;i+=loteSize){
+    const lote=nuevos.slice(i,i+loteSize);
+    const res=await sb.from('vencimientos').insert(lote).select();
+    if(res.error){setSyncing(false);btn.disabled=false;btn.textContent='Generar todas las tareas';toast('Error: '+res.error.message);return;}
+    db.vencimientos.push(...res.data);
+    insertados+=res.data.length;
+  }
+
+  setSyncing(false);
+  btn.disabled=false;btn.textContent='Generar todas las tareas';
+  toast(`✅ ${insertados} vencimiento${insertados>1?'s':''} generado${insertados>1?'s':''} para ${MESES[mes]}`);
+  closeModal('modal-mes-completo');
   renderVencimientos();
   renderAll();
 }
@@ -2924,6 +3435,271 @@ function renderAll(){
 
 // Enter en login
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('setup-screen').classList.contains('show'))authAction();});
+
+/*
+ ═══════════════════════════════════════════════════════════════════
+ SQL PARA EJECUTAR EN SUPABASE (Dashboard → SQL Editor)
+ ═══════════════════════════════════════════════════════════════════
+ Para que AMBOS usuarios vean todos los datos, ejecutá este SQL:
+
+ -- 1. ACCESOS: todos los usuarios autenticados pueden ver y editar
+ DROP POLICY IF EXISTS "accesos_select" ON accesos;
+ DROP POLICY IF EXISTS "accesos_insert" ON accesos;
+ DROP POLICY IF EXISTS "accesos_update" ON accesos;
+ DROP POLICY IF EXISTS "accesos_delete" ON accesos;
+ CREATE POLICY "accesos_select" ON accesos FOR SELECT TO authenticated USING (true);
+ CREATE POLICY "accesos_insert" ON accesos FOR INSERT TO authenticated WITH CHECK (true);
+ CREATE POLICY "accesos_update" ON accesos FOR UPDATE TO authenticated USING (true);
+ CREATE POLICY "accesos_delete" ON accesos FOR DELETE TO authenticated USING (true);
+
+ -- 2. CLIENTES (ídem, por si también tiene restricción)
+ DROP POLICY IF EXISTS "clientes_select" ON clientes;
+ DROP POLICY IF EXISTS "clientes_insert" ON clientes;
+ DROP POLICY IF EXISTS "clientes_update" ON clientes;
+ DROP POLICY IF EXISTS "clientes_delete" ON clientes;
+ CREATE POLICY "clientes_select" ON clientes FOR SELECT TO authenticated USING (true);
+ CREATE POLICY "clientes_insert" ON clientes FOR INSERT TO authenticated WITH CHECK (true);
+ CREATE POLICY "clientes_update" ON clientes FOR UPDATE TO authenticated USING (true);
+ CREATE POLICY "clientes_delete" ON clientes FOR DELETE TO authenticated USING (true);
+
+ -- 3. VENCIMIENTOS
+ DROP POLICY IF EXISTS "vencimientos_select" ON vencimientos;
+ DROP POLICY IF EXISTS "vencimientos_insert" ON vencimientos;
+ DROP POLICY IF EXISTS "vencimientos_update" ON vencimientos;
+ DROP POLICY IF EXISTS "vencimientos_delete" ON vencimientos;
+ CREATE POLICY "vencimientos_select" ON vencimientos FOR SELECT TO authenticated USING (true);
+ CREATE POLICY "vencimientos_insert" ON vencimientos FOR INSERT TO authenticated WITH CHECK (true);
+ CREATE POLICY "vencimientos_update" ON vencimientos FOR UPDATE TO authenticated USING (true);
+ CREATE POLICY "vencimientos_delete" ON vencimientos FOR DELETE TO authenticated USING (true);
+
+ -- 4. COBROS
+ DROP POLICY IF EXISTS "cobros_select" ON cobros;
+ DROP POLICY IF EXISTS "cobros_insert" ON cobros;
+ DROP POLICY IF EXISTS "cobros_update" ON cobros;
+ DROP POLICY IF EXISTS "cobros_delete" ON cobros;
+ CREATE POLICY "cobros_select" ON cobros FOR SELECT TO authenticated USING (true);
+ CREATE POLICY "cobros_insert" ON cobros FOR INSERT TO authenticated WITH CHECK (true);
+ CREATE POLICY "cobros_update" ON cobros FOR UPDATE TO authenticated USING (true);
+ CREATE POLICY "cobros_delete" ON cobros FOR DELETE TO authenticated USING (true);
+
+ -- 5. (Opcional) Tabla de perfiles para mostrar "cargado por" en accesos
+ CREATE TABLE IF NOT EXISTS user_profiles (
+   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+   name TEXT,
+   updated_at TIMESTAMPTZ DEFAULT now()
+ );
+ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+ CREATE POLICY "profiles_select" ON user_profiles FOR SELECT TO authenticated USING (true);
+ CREATE POLICY "profiles_upsert" ON user_profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+ CREATE POLICY "profiles_update" ON user_profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
+
+ -- 6. (Opcional) Trigger para auto-crear perfil al registrarse
+ CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+ BEGIN
+   INSERT INTO public.user_profiles (id, name)
+   VALUES (new.id, COALESCE(new.raw_user_meta_data->>'name', split_part(new.email,'@',1)));
+   RETURN new;
+ END;
+ $$;
+ ═══════════════════════════════════════════════════════════════════
+*/
+
+// ═══════════════════════════════════════════
+// MI ESTUDIO
+// ═══════════════════════════════════════════
+let socioData = null; // datos del socio vinculado
+
+async function renderEstudio(){
+  // Intentar obtener nombre desde user_profiles (más confiable)
+  let name = currentUser?.user_metadata?.name || currentUser?.email?.split('@')[0] || 'Admin';
+  let email = currentUser?.email || '—';
+
+  try {
+    const {data: profile} = await sb.from('user_profiles').select('name,email').eq('id', currentUser.id).maybeSingle();
+    if(profile?.name) name = profile.name;
+    if(profile?.email) email = profile.email;
+  } catch(e) { /* silencioso */ }
+
+  const av = document.getElementById('estudio-mi-avatar');
+  const nm = document.getElementById('estudio-mi-nombre');
+  const em = document.getElementById('estudio-mi-email');
+  if(av) av.textContent = name.slice(0,2).toUpperCase();
+  if(nm) nm.textContent = name;
+  if(em) em.textContent = email;
+
+  await cargarSocio();
+}
+
+async function cargarSocio(){
+  const {data, error} = await sb.from('estudio_socios')
+    .select('*')
+    .or(`user_id.eq.${currentUser.id},socio_id.eq.${currentUser.id}`)
+    .maybeSingle();
+
+  const container = document.getElementById('estudio-socio-container');
+  const invSection = document.getElementById('estudio-invitar-section');
+  if(!container) return;
+
+  if(error || !data){
+    socioData = null;
+    container.innerHTML = `<div class="empty" style="padding:1.5rem;border:1px dashed var(--border);border-radius:var(--radius)"><p style="font-size:13px">Sin socio vinculado aún</p></div>`;
+    if(invSection) invSection.style.display = 'block';
+    return;
+  }
+
+  socioData = data;
+  // Determinar cuál es el socio (el que no soy yo)
+  const socioId = data.user_id === currentUser.id ? data.socio_id : data.user_id;
+  const socioEmail = data.user_id === currentUser.id ? data.socio_email : data.admin_email;
+  const socioNombre = socioEmail?.split('@')[0] || 'Socio';
+  const esAdmin = data.user_id === currentUser.id;
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--ok-light);border-radius:var(--radius);border:1px solid #b0d8c0">
+      <div class="avatar" style="width:36px;height:36px;font-size:13px;background:var(--ok-light);color:var(--ok)">${socioNombre.slice(0,2).toUpperCase()}</div>
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:13px">${socioNombre}</div>
+        <div style="font-size:12px;color:var(--text3)">${socioEmail || '—'}</div>
+      </div>
+      <span class="badge badge-ok">✓ Vinculado</span>
+      ${esAdmin ? `<button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="desvincularSocio('${data.id}')">Desvincular</button>` : ''}
+    </div>`;
+
+  // Si ya hay socio, ocultar formulario de invitación
+  if(invSection) invSection.style.display = 'none';
+}
+
+async function vincularSocio(){
+  const emailInput = document.getElementById('estudio-socio-email');
+  const errEl = document.getElementById('estudio-vincular-error');
+  const email = emailInput?.value.trim().toLowerCase();
+  errEl.style.display = 'none';
+
+  if(!email){ errEl.textContent = 'Ingresá el email del socio'; errEl.style.display = 'block'; return; }
+  if(email === currentUser.email.toLowerCase()){ errEl.textContent = 'No podés vincularte con vos mismo'; errEl.style.display = 'block'; return; }
+
+  setSyncing(true);
+
+  // Buscar el usuario por email en user_profiles
+  const {data: profile, error: profErr} = await sb
+    .from('user_profiles')
+    .select('id, name')
+    .eq('email', email)
+    .maybeSingle();
+
+  if(profErr || !profile){
+    setSyncing(false);
+    errEl.textContent = 'No se encontró ningún usuario con ese email. Asegurate que el socio ya tenga cuenta creada.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Crear el vínculo
+  const {error: insErr} = await sb.from('estudio_socios').insert({
+    user_id: currentUser.id,
+    socio_id: profile.id,
+    admin_email: currentUser.email,
+    socio_email: email,
+  });
+
+  setSyncing(false);
+
+  if(insErr){
+    errEl.textContent = 'Error al vincular: ' + insErr.message;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  emailInput.value = '';
+  toast('Socio vinculado correctamente ✓');
+  await cargarSocio();
+  // Recargar datos con el nuevo alcance compartido
+  await loadAll();
+  renderAll();
+}
+
+async function desvincularSocio(id){
+  confirm_('Desvincular socio', '¿Seguro que querés desvincular al socio? Los clientes compartidos seguirán existiendo pero el socio ya no podrá verlos.', async()=>{
+    setSyncing(true);
+    await sb.from('estudio_socios').delete().eq('id', id);
+    setSyncing(false);
+    socioData = null;
+    toast('Socio desvinculado');
+    await cargarSocio();
+  });
+}
+
+/*
+ ═══════════════════════════════════════════════════════════════════
+ SQL PARA MI ESTUDIO — ejecutar en Supabase SQL Editor
+ ═══════════════════════════════════════════════════════════════════
+
+ -- 1. Tabla de vínculos entre socios
+ CREATE TABLE IF NOT EXISTS estudio_socios (
+   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+   socio_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+   admin_email TEXT,
+   socio_email TEXT,
+   created_at TIMESTAMPTZ DEFAULT now(),
+   UNIQUE(user_id, socio_id)
+ );
+ ALTER TABLE estudio_socios ENABLE ROW LEVEL SECURITY;
+ CREATE POLICY "socios_select" ON estudio_socios FOR SELECT TO authenticated
+   USING (user_id = auth.uid() OR socio_id = auth.uid());
+ CREATE POLICY "socios_insert" ON estudio_socios FOR INSERT TO authenticated
+   WITH CHECK (user_id = auth.uid());
+ CREATE POLICY "socios_delete" ON estudio_socios FOR DELETE TO authenticated
+   USING (user_id = auth.uid());
+
+ -- 2. Agregar email a user_profiles para poder buscar por email
+ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS email TEXT;
+
+ -- 3. Actualizar trigger para guardar el email en user_profiles
+ CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+ BEGIN
+   INSERT INTO public.user_profiles (id, name, email)
+   VALUES (new.id,
+     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email,'@',1)),
+     new.email)
+   ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
+   RETURN new;
+ END;
+ $$;
+
+ -- 4. Poblar emails de usuarios existentes
+ INSERT INTO public.user_profiles (id, name, email)
+ SELECT id,
+   COALESCE(raw_user_meta_data->>'name', split_part(email,'@',1)),
+   email
+ FROM auth.users
+ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
+
+ ═══════════════════════════════════════════════════════════════════
+*/
+
+/*
+ ═══════════════════════════════════════════════════════════════════
+ SQL PARA CLIENTES COMPARTIDOS — ejecutar en Supabase SQL Editor
+ ═══════════════════════════════════════════════════════════════════
+
+ -- 1. Agregar columna compartido a la tabla clientes
+ ALTER TABLE clientes ADD COLUMN IF NOT EXISTS compartido BOOLEAN DEFAULT false;
+
+ -- 2. Actualizar políticas RLS para que cada usuario vea
+ --    sus propios clientes Y los compartidos
+ DROP POLICY IF EXISTS "clientes_select" ON clientes;
+ CREATE POLICY "clientes_select" ON clientes
+   FOR SELECT TO authenticated
+   USING (created_by = auth.uid() OR compartido = true);
+
+ -- Insert/Update/Delete siguen siendo para todos los autenticados
+ -- (ya configurado en el paso anterior de RLS)
+
+ ═══════════════════════════════════════════════════════════════════
+*/
 </script>
 </body>
 </html>

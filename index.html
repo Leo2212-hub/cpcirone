@@ -529,13 +529,13 @@ textarea{height:80px;resize:vertical}
                 <div id="excel-load-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
               </div>
               <div>
-                <label class="form-label" style="margin-bottom:8px;display:block">2. Facturas en PDF <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+                <label class="form-label" style="margin-bottom:8px;display:block">2. Facturas en PDF o foto <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
                 <div id="drop-pdfs-wiz" onclick="document.getElementById('input-pdfs-wiz').click()" style="border:2px dashed var(--border);border-radius:var(--radius-lg);padding:1.75rem;cursor:pointer;transition:all .2s;background:var(--bg);text-align:center">
                   <div style="font-size:32px;margin-bottom:8px">🧾</div>
                   <div style="font-size:13px;font-weight:500;color:var(--text2)" id="pdfs-wiz-label">Hacer clic o arrastrar aquí</div>
-                  <div style="font-size:11px;color:var(--text3);margin-top:4px">Podés subir varios PDF a la vez</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:4px">PDF, JPG, PNG — podés subir varios a la vez</div>
                 </div>
-                <input type="file" id="input-pdfs-wiz" accept=".pdf" multiple style="display:none" onchange="cargarPDFsWizard(this)">
+                <input type="file" id="input-pdfs-wiz" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple style="display:none" onchange="cargarPDFsWizard(this)">
                 <div id="pdfs-wiz-status" style="font-size:12px;color:var(--text3);margin-top:8px"></div>
               </div>
             </div>
@@ -569,18 +569,34 @@ textarea{height:80px;resize:vertical}
 
           <div class="card" style="margin-bottom:1rem">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem">
-              <!-- Visor PDF -->
+              <!-- Visor PDF / Foto -->
               <div id="wiz-pdf-panel">
-                <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Factura PDF</div>
+                <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem" id="wiz-visor-label">Factura</div>
                 <div id="wiz-pdf-container" style="border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden">
                   <div id="wiz-pdf-placeholder" style="text-align:center;color:var(--text3);font-size:12px;padding:1rem">
                     <div style="font-size:32px;margin-bottom:8px">📄</div>
-                    <div>Sin PDF asociado</div>
-                    <div style="font-size:11px;margin-top:4px">Subí los PDFs en el paso 1</div>
+                    <div>Sin archivo asociado</div>
+                    <div style="font-size:11px;margin-top:4px">Subí los archivos en el paso 1</div>
                   </div>
                   <iframe id="wiz-pdf-frame" style="display:none;width:100%;height:100%;border:none"></iframe>
+                  <div id="wiz-img-wrapper" style="display:none;width:100%;height:100%;overflow:hidden;position:relative;cursor:grab;background:#f0f0f0" onwheel="wheelZoom(event)">
+                    <img id="wiz-img-frame" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:95%;max-height:95%;object-fit:contain;cursor:grab;user-select:none" alt="Factura"
+                      onmousedown="imgDragStart(event)" onmousemove="imgDragMove(event)" onmouseup="imgDragEnd()" onmouseleave="imgDragEnd()">
+                  </div>
                 </div>
-                <div id="wiz-pdf-nombre" style="font-size:10px;color:var(--text3);margin-top:4px;text-align:center"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+                  <div id="wiz-pdf-nombre" style="font-size:10px;color:var(--text3)"></div>
+                  <div id="wiz-img-controles" style="display:none;align-items:center;gap:4px">
+                    <button onclick="zoomImagen(1/1.3)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;color:var(--text2);line-height:1" title="Alejar">−</button>
+                    <span id="wiz-zoom-label" style="font-size:11px;color:var(--text3);min-width:36px;text-align:center">100%</span>
+                    <button onclick="zoomImagen(1.3)" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;color:var(--text2);line-height:1" title="Acercar">+</button>
+                    <button onclick="rotarImagen()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px" title="Rotar">
+                      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                      Rotar
+                    </button>
+                    <button onclick="resetImagen()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;color:var(--text3)" title="Restablecer">↺</button>
+                  </div>
+                </div>
               </div>
               <div>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
@@ -637,8 +653,9 @@ textarea{height:80px;resize:vertical}
               <button class="btn btn-danger" style="min-width:140px" onclick="wizardAccion('problema')">⚠️ Con problema</button>
               <button class="btn btn-primary" style="min-width:140px" onclick="wizardAccion('ok')">✅ Verificada</button>
             </div>
-            <div style="text-align:center;margin-top:1rem">
+            <div style="text-align:center;margin-top:.75rem;display:flex;align-items:center;justify-content:center;gap:1.5rem">
               <button onclick="wizardNav(-1)" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px">← Volver a la anterior</button>
+              <button onclick="dividirArchivo()" id="btn-dividir" style="background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text2);cursor:pointer;font-size:12px;padding:4px 10px" title="Usar este archivo para dos facturas distintas">✂️ Contiene 2 facturas</button>
             </div>
           </div>
         </div>
@@ -658,7 +675,7 @@ textarea{height:80px;resize:vertical}
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Estado</th><th>Emisor</th><th>Comprobante</th><th>Fecha</th><th>Total</th><th>Observación</th></tr></thead>
+                <thead><tr><th>Estado</th><th>Archivo</th><th>Emisor</th><th>Comprobante</th><th>Total</th><th>Observación</th></tr></thead>
                 <tbody id="conc-tabla"></tbody>
               </table>
             </div>
@@ -666,6 +683,23 @@ textarea{height:80px;resize:vertical}
               <button class="btn btn-primary" onclick="wizardVolver()">← Seguir revisando</button>
               <button class="btn" onclick="exportarConciliacion()">⬇ Exportar Excel</button>
               <button class="btn" onclick="limpiarConciliacion()">Reiniciar</button>
+            </div>
+          </div>
+
+          <!-- Filas del Excel sin PDF asociado -->
+          <div class="card" id="conc-sin-pdf-card" style="margin-top:1rem;display:none">
+            <div class="card-header">
+              <div>
+                <div class="card-title" style="color:var(--warn)">⚠️ Filas en Excel sin factura asociada</div>
+                <div class="card-subtitle">Estas filas del reporte AFIP no fueron vinculadas a ningún PDF/foto durante la conciliación</div>
+              </div>
+              <span class="badge badge-warn" id="conc-sin-pdf-count"></span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Emisor</th><th>CUIT</th><th>Comprobante</th><th>Fecha</th><th>Total</th><th>Moneda</th></tr></thead>
+                <tbody id="conc-sin-pdf-tabla"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -2438,7 +2472,7 @@ function normalizeExcelRow(row){
 // ═══════════════════════════════════════════
 // CONCILIACIÓN DE COMPROBANTES — WIZARD
 // ═══════════════════════════════════════════
-let wizPDFs=[], wizExcel=[], wizIdx=0, wizResultados=[], concFiltro='todos';
+let wizPDFs=[], wizExcel=[], wizIdx=0, wizResultados=[], concFiltro='todos', imgRotacion=0, imgZoom=1, imgPanX=0, imgPanY=0;
 
 // ── Carga Excel ──────────────────────────────
 function cargarExcelWizard(input){
@@ -2470,15 +2504,77 @@ function cargarPDFsWizard(input){
   wizPDFs=files.map(f=>({
     file:f, name:f.name,
     url:URL.createObjectURL(f),
-    // Extraer CUIT y NRO del nombre del archivo
+    esImagen:/\.(jpe?g|png|webp)$/i.test(f.name),
     cuitNombre:normCuit((f.name.match(/\d{2}[-_]\d{8}[-_]\d/)||[])[0]||''),
     nroNombre: normComp((f.name.match(/(\d{6,8})(?=\D|$)/g)||[]).slice(-1)[0]||''),
   }));
-  document.getElementById('pdfs-wiz-label').textContent=`✅ ${files.length} PDF${files.length>1?'s':''} cargado${files.length>1?'s':''}`;
+  const pdfs=wizPDFs.filter(f=>!f.esImagen).length;
+  const imgs=wizPDFs.filter(f=>f.esImagen).length;
+  const partes=[];
+  if(pdfs>0)partes.push(`${pdfs} PDF${pdfs>1?'s':''}`);
+  if(imgs>0)partes.push(`${imgs} foto${imgs>1?'s':''}`);
+  document.getElementById('pdfs-wiz-label').textContent=`✅ ${partes.join(' + ')} cargado${wizPDFs.length>1?'s':''}`;
   document.getElementById('drop-pdfs-wiz').style.borderColor='var(--ok)';
   document.getElementById('drop-pdfs-wiz').style.background='var(--ok-light)';
-  document.getElementById('pdfs-wiz-status').textContent=`${files.length} archivo${files.length>1?'s':''}`;
+  document.getElementById('pdfs-wiz-status').textContent=`${wizPDFs.length} archivo${wizPDFs.length>1?'s':''}`;
   checkWizardReady();
+}
+function aplicarTransformImg(){
+  const img=document.getElementById('wiz-img-frame');
+  const lbl=document.getElementById('wiz-zoom-label');
+  if(!img)return;
+  img.style.transform=`translate(calc(-50% + ${imgPanX}px), calc(-50% + ${imgPanY}px)) rotate(${imgRotacion}deg) scale(${imgZoom})`;
+  if(lbl)lbl.textContent=Math.round(imgZoom*100)+'%';
+}
+function rotarImagen(){
+  imgRotacion=(imgRotacion+90)%360;
+  imgPanX=0; imgPanY=0;
+  aplicarTransformImg();
+}
+function zoomImagen(factor){
+  imgZoom=Math.min(10,Math.max(0.1,imgZoom*factor));
+  aplicarTransformImg();
+}
+function resetImagen(){
+  imgRotacion=0; imgZoom=1; imgPanX=0; imgPanY=0;
+  aplicarTransformImg();
+}
+function wheelZoom(e){
+  e.preventDefault();
+  const factor=e.deltaY<0?1.12:1/1.12;
+  // Zoom centrado en el punto del mouse dentro del wrapper
+  const wrapper=document.getElementById('wiz-img-wrapper');
+  const img=document.getElementById('wiz-img-frame');
+  if(!wrapper||!img)return;
+  const rect=wrapper.getBoundingClientRect();
+  const cx=rect.width/2;
+  const cy=rect.height/2;
+  const mx=e.clientX-rect.left-cx;
+  const my=e.clientY-rect.top-cy;
+  // Ajustar pan para que el zoom sea centrado donde está el mouse
+  imgPanX=mx+(imgPanX-mx)*factor;
+  imgPanY=my+(imgPanY-my)*factor;
+  imgZoom=Math.min(10,Math.max(0.1,imgZoom*factor));
+  aplicarTransformImg();
+}
+// Pan (arrastrar imagen)
+let imgDragging=false, imgDragStartX=0, imgDragStartY=0, imgPanStartX=0, imgPanStartY=0;
+function imgDragStart(e){
+  imgDragging=true;
+  imgDragStartX=e.clientX; imgDragStartY=e.clientY;
+  imgPanStartX=imgPanX; imgPanStartY=imgPanY;
+  e.target.style.cursor='grabbing';
+}
+function imgDragMove(e){
+  if(!imgDragging)return;
+  imgPanX=imgPanStartX+(e.clientX-imgDragStartX);
+  imgPanY=imgPanStartY+(e.clientY-imgDragStartY);
+  aplicarTransformImg();
+}
+function imgDragEnd(){
+  imgDragging=false;
+  const img=document.getElementById('wiz-img-frame');
+  if(img)img.style.cursor='grab';
 }
 
 function checkWizardReady(){
@@ -2523,7 +2619,7 @@ function iniciarWizard(){
 function mostrarWizCard(){
   const res=wizResultados[wizIdx];
   const pdf=res.pdf;
-  const row=res.excelRow;
+  const row=res.excelRow||null;
   const total=wizPDFs.length;
 
   // Progreso
@@ -2540,19 +2636,52 @@ function mostrarWizCard(){
   document.getElementById('wiz-badge-skip').textContent=`❌ ${skip}`;
 
   // PDF viewer
-  document.getElementById('wiz-pdf-frame').src=pdf.url;
-  document.getElementById('wiz-pdf-frame').style.display='block';
-  document.getElementById('wiz-pdf-placeholder').style.display='none';
+  // Visor: imagen o PDF según tipo
+  const pdfFrame=document.getElementById('wiz-pdf-frame');
+  const imgWrapper=document.getElementById('wiz-img-wrapper');
+  const imgFrame=document.getElementById('wiz-img-frame');
+  const placeholder=document.getElementById('wiz-pdf-placeholder');
+  const visorLabel=document.getElementById('wiz-visor-label');
+  const controles=document.getElementById('wiz-img-controles');
+  pdfFrame.style.display='none';
+  imgWrapper.style.display='none';
+  placeholder.style.display='none';
+  imgRotacion=0; imgZoom=1; imgPanX=0; imgPanY=0;
+  const imgEl=document.getElementById('wiz-img-frame');
+  if(imgEl){imgEl.style.transform='translate(-50%,-50%)';}
+  const wrapEl=document.getElementById('wiz-img-wrapper');
+  if(wrapEl){wrapEl.scrollTop=0;wrapEl.scrollLeft=0;}
+  if(document.getElementById('wiz-zoom-label'))document.getElementById('wiz-zoom-label').textContent='100%';
+  if(pdf.esImagen){
+    imgFrame.src=pdf.url;
+    imgWrapper.style.display='flex';
+    if(visorLabel)visorLabel.textContent='Factura (foto)';
+    if(controles)controles.style.display='inline-flex';
+  }else{
+    pdfFrame.src=pdf.url;
+    pdfFrame.style.display='block';
+    if(visorLabel)visorLabel.textContent='Factura PDF';
+    if(controles)controles.style.display='none';
+  }
   document.getElementById('wiz-pdf-nombre').textContent=pdf.name;
 
-  // Fila Excel sugerida
+  // Fila Excel sugerida — muestra la primera seleccionada en el panel
   actualizarPanelExcel(row, res.razonMatch);
 
   // Obs y estado previo
   document.getElementById('wiz-obs').value=res.obs||'';
 
-  // Selector de fila manual
-  poblarSelectorExcel(row);
+  // Selector de fila simple
+  poblarSelectorExcel(res.excelRow);
+
+  // Resetear botón dividir
+  const btnDiv=document.getElementById('btn-dividir');
+  if(btnDiv){
+    btnDiv.disabled=res.esCopia||false;
+    btnDiv.style.borderColor='';btnDiv.style.color='';
+    btnDiv.textContent='✂️ Contiene 2 facturas';
+    if(res.esCopia){btnDiv.style.color='var(--text3)';btnDiv.textContent='✂️ 2ª factura';}
+  }
 
   // Color card según estado
   const card=document.getElementById('wiz-card');
@@ -2615,7 +2744,6 @@ function renderListadoExcel(rowActual, q){
   const listado=document.getElementById('wiz-excel-listado');
   const ql=q.toLowerCase();
   const filtradas=wizExcel.filter(r=>{
-    // Filtro de moneda
     const moneda=r.moneda||'PES';
     const esExt=moneda!=='PES'&&moneda!=='ARS'&&moneda!=='$';
     if(wizMonedaFiltro==='ars'&&esExt)return false;
@@ -2625,16 +2753,11 @@ function renderListadoExcel(rowActual, q){
     if((r.cuit||'').includes(ql))return true;
     if((r.nro||'').includes(ql))return true;
     if((r.pdv||'').includes(ql))return true;
-    // Buscar por importe — comparar contra el número ingresado
     if(r.importe>0){
       const impStr=String(r.importe);
       const impARS=r.importe.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
       if(impStr.includes(ql)||impARS.includes(ql))return true;
-      // También comparar contra estimado USD
-      if(r.tipoCambio>0){
-        const usd=(r.importe/r.tipoCambio).toFixed(2);
-        if(usd.includes(ql))return true;
-      }
+      if(r.tipoCambio>0){const usd=(r.importe/r.tipoCambio).toFixed(2);if(usd.includes(ql))return true;}
     }
     return false;
   });
@@ -2645,6 +2768,8 @@ function renderListadoExcel(rowActual, q){
   listado.innerHTML=filtradas.map(r=>{
     const idx=wizExcel.indexOf(r);
     const isSelected=r===rowActual;
+    const moneda=r.moneda||'PES';
+    const esExt=moneda!=='PES'&&moneda!=='ARS'&&moneda!=='$';
     return`<div onclick="seleccionarFilaManual(${idx})" style="
       display:flex;align-items:center;justify-content:space-between;
       padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);
@@ -2659,9 +2784,7 @@ function renderListadoExcel(rowActual, q){
       <div style="text-align:right;flex-shrink:0;margin-left:8px">
         <div style="font-size:13px;font-weight:600;color:${isSelected?'var(--accent)':'var(--text)'}">
           ${r.importe?fmt$(r.importe):'—'}
-          ${(r.moneda&&r.moneda!=='PES'&&r.moneda!=='ARS')
-            ?`<span class="badge badge-warn" style="font-size:9px">${r.moneda}</span>${r.tipoCambio>0?`<div style="font-size:10px;color:var(--warn)">≈ ${r.moneda} ${(r.importe/r.tipoCambio).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>`:''}`
-            :''}
+          ${esExt?`<span class="badge badge-warn" style="font-size:9px">${moneda}</span>`:''}
         </div>
         ${isSelected?'<div style="font-size:10px;color:var(--accent)">✓ seleccionada</div>':''}
       </div>
@@ -2674,6 +2797,31 @@ function seleccionarFilaManual(idx){
   wizResultados[wizIdx].razonMatch='Selección manual';
   actualizarPanelExcel(wizExcel[idx],'Selección manual');
   renderListadoExcel(wizExcel[idx], document.getElementById('wiz-excel-search').value);
+}
+
+// ── Dividir archivo en dos registros ─────────
+function dividirArchivo(){
+  const res=wizResultados[wizIdx];
+  // Crear una copia del registro actual justo después del índice actual
+  const copia={
+    pdf: res.pdf, // mismo archivo
+    excelRow: null,
+    razonMatch: null,
+    estado: 'pendiente',
+    obs: '',
+    esCopia: true, // marcar para identificar en el resumen
+  };
+  // Insertar la copia justo después del registro actual
+  wizResultados.splice(wizIdx+1, 0, copia);
+  // Marcar el actual como "factura 1 de 2"
+  res.obs = res.obs ? res.obs+' [Factura 1/2]' : '[Factura 1/2]';
+  document.getElementById('wiz-obs').value=res.obs;
+  toast(`✂️ Archivo duplicado — ahora tenés ${wizResultados.length} registros. Verificá esta factura y luego la segunda.`);
+  // Actualizar progreso
+  document.getElementById('wiz-progreso-label').textContent=`${wizIdx+1} de ${wizResultados.length}`;
+  // Resaltar el botón para indicar que ya se dividió
+  const btn=document.getElementById('btn-dividir');
+  if(btn){btn.style.borderColor='var(--ok)';btn.style.color='var(--ok)';btn.textContent='✂️ Dividida en 2';btn.disabled=true;}
 }
 
 // ── Acciones ─────────────────────────────────
@@ -2730,19 +2878,42 @@ function renderResumen(){
   const estadoBadge={ok:'<span class="badge badge-ok">✅ Verificada</span>',problema:'<span class="badge badge-danger">⚠️ Problema</span>','no-encontrada':'<span class="badge badge-warn">❌ No encontrada</span>',pendiente:'<span class="badge badge-neutral">⏳ Pendiente</span>'};
   const lista=concFiltro==='todos'?wizResultados:wizResultados.filter(r=>r.estado===concFiltro);
   const tb=document.getElementById('conc-tabla');
-  if(!lista.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</td></tr>';return;}
-  tb.innerHTML=lista.map(r=>{
-    const globalIdx=wizResultados.indexOf(r);
-    const row=r.excelRow;
-    return`<tr style="cursor:pointer" onclick="wizIdx=${globalIdx};wizardVolver()">
-      <td>${estadoBadge[r.estado]||''}</td>
-      <td style="font-size:12px;color:var(--text3)">${r.pdf.name.slice(0,30)}${r.pdf.name.length>30?'…':''}</td>
-      <td style="font-weight:500;font-size:13px">${row?row.razon||'—':'—'}</td>
-      <td style="font-family:monospace;font-size:12px">${row?row.pdv+'-'+row.nro:'—'}</td>
-      <td style="font-weight:600">${row&&row.importe?fmt$(row.importe):'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${r.obs||'—'}</td>
-    </tr>`;
-  }).join('');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Sin resultados</td></tr>';}
+  else{
+    tb.innerHTML=lista.map(r=>{
+      const globalIdx=wizResultados.indexOf(r);
+      const row=r.excelRow;
+      return`<tr style="cursor:pointer" onclick="wizIdx=${globalIdx};wizardVolver()">
+        <td>${estadoBadge[r.estado]||''}</td>
+        <td style="font-size:12px;color:var(--text3)">${r.pdf.name.slice(0,28)}${r.pdf.name.length>28?'…':''}${r.esCopia?` <span class="badge badge-blue" style="font-size:9px">2ª factura</span>`:''}</td>
+        <td style="font-weight:500;font-size:13px">${row?row.razon||'—':'—'}</td>
+        <td style="font-family:monospace;font-size:12px">${row?row.pdv+'-'+row.nro:'—'}</td>
+        <td style="font-weight:600">${row&&row.importe?fmt$(row.importe):'—'}</td>
+        <td style="font-size:12px;color:var(--text2)">${r.obs||'—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Filas del Excel que no fueron asociadas a ningún PDF
+  const filasUsadas=new Set(wizResultados.filter(r=>r.excelRow).map(r=>r.excelRow));
+  const sinPdf=wizExcel.filter(row=>!filasUsadas.has(row));
+  const cardSinPdf=document.getElementById('conc-sin-pdf-card');
+  const tablaSinPdf=document.getElementById('conc-sin-pdf-tabla');
+  const countSinPdf=document.getElementById('conc-sin-pdf-count');
+  if(sinPdf.length>0){
+    cardSinPdf.style.display='block';
+    if(countSinPdf) countSinPdf.textContent=`${sinPdf.length} fila${sinPdf.length>1?'s':''}`;
+    tablaSinPdf.innerHTML=sinPdf.map(row=>`<tr>
+      <td style="font-weight:500;font-size:13px">${row.razon||'—'}</td>
+      <td style="font-family:monospace;font-size:12px">${row.cuit||'—'}</td>
+      <td style="font-family:monospace;font-size:12px">${row.pdv||''}-${row.nro||''}</td>
+      <td style="font-size:12px">${row.fecha||'—'}</td>
+      <td style="font-weight:600">${row.importe?fmt$(row.importe):'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${row.moneda||'ARS'}</td>
+    </tr>`).join('');
+  } else {
+    cardSinPdf.style.display='none';
+  }
 }
 
 function exportarConciliacion(){
@@ -2750,7 +2921,7 @@ function exportarConciliacion(){
     const row=r.excelRow||{};
     return{
       'Estado':r.estado==='ok'?'Verificada':r.estado==='problema'?'Con problema':r.estado==='no-encontrada'?'No encontrada':'Pendiente',
-      'PDF':r.pdf.name,
+      'Archivo':r.pdf.name+(r.esCopia?' [2ª factura]':''),
       'Emisor (Excel)':row.razon||'',
       'CUIT':row.cuit||'',
       'Tipo':row.tipo||'',
@@ -2764,6 +2935,12 @@ function exportarConciliacion(){
   }));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Conciliación');
+  const filasUsadas=new Set(wizResultados.filter(r=>r.excelRow).map(r=>r.excelRow));
+  const sinPdf=wizExcel.filter(row=>!filasUsadas.has(row));
+  if(sinPdf.length>0){
+    const ws2=XLSX.utils.json_to_sheet(sinPdf.map(row=>({'Emisor':row.razon||'','CUIT':row.cuit||'','Tipo':row.tipo||'','Punto de Venta':row.pdv||'','Número':row.nro||'','Fecha':row.fecha||'','Total':row.importe||0,'Moneda':row.moneda||'ARS'})));
+    XLSX.utils.book_append_sheet(wb,ws2,'Sin factura asociada');
+  }
   XLSX.writeFile(wb,'conciliacion_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 

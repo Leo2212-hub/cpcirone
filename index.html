@@ -435,6 +435,30 @@ textarea{height:80px;resize:vertical}
           </button>
         </div>
         <div class="stats-grid" id="cobros-stats" style="display:none"></div>
+
+        <!-- GESTIÓN MENSUAL -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Gestión mensual</div>
+              <div class="card-subtitle">Marcá los honorarios cobrados del mes de un vistazo</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="cobros-mes-sel" onchange="renderGestionMensual()" style="width:auto;font-size:12px">
+                <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+              </select>
+              <select id="cobros-anio-sel" onchange="renderGestionMensual()" style="width:auto;font-size:12px">
+                <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+              </select>
+              <div id="cobros-mensual-resumen" style="font-size:12px;color:var(--text3)"></div>
+            </div>
+          </div>
+          <div id="cobros-mensual-lista" style="max-height:380px;overflow-y:auto"></div>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <div class="tabs" style="margin-bottom:0">
@@ -1411,7 +1435,7 @@ function nav(page,el){
   document.getElementById('page-title').textContent=PT[page];
   document.getElementById('page-sub').textContent=PS[page];
   renderTopbarActions(page);
-  const fn={inicio:renderDashboard,clientes:renderClientes,'ficha-cliente':()=>{},vencimientos:renderVencimientos,cobros:renderCobros,reportes:renderReportes,accesos:renderAccesos,afip:renderAfip,conciliacion:()=>{}};
+  const fn={inicio:renderDashboard,clientes:renderClientes,'ficha-cliente':()=>{},vencimientos:renderVencimientos,cobros:()=>{renderCobros();initGestionMensual();},reportes:renderReportes,accesos:renderAccesos,afip:renderAfip,conciliacion:()=>{}};
   if(fn[page])fn[page]();
 }
 function renderTopbarActions(page){
@@ -1811,6 +1835,164 @@ async function guardarCobro(){
   toast(editId?'Cobro actualizado ✓':'Cobro registrado ✓');
   closeModal('modal-cobro');renderCobros();renderAll();
 }
+// ═══════════════════════════════════════════
+// GESTIÓN MENSUAL DE COBROS
+// ═══════════════════════════════════════════
+function initGestionMensual(){
+  const hoy=new Date();
+  const selMes=document.getElementById('cobros-mes-sel');
+  const selAnio=document.getElementById('cobros-anio-sel');
+  if(selMes) selMes.value=String(hoy.getMonth()+1);
+  if(selAnio) selAnio.value=String(hoy.getFullYear());
+  renderGestionMensual();
+}
+
+function renderGestionMensual(){
+  const mes=parseInt(document.getElementById('cobros-mes-sel')?.value||new Date().getMonth()+1);
+  const anio=parseInt(document.getElementById('cobros-anio-sel')?.value||new Date().getFullYear());
+  const lista=document.getElementById('cobros-mensual-lista');
+  const resumen=document.getElementById('cobros-mensual-resumen');
+  if(!lista)return;
+
+  // Clientes activos con honorario
+  const clientes=db.clientes.filter(c=>c.estado==='Activo'&&c.honorario>0)
+    .sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  if(!clientes.length){
+    lista.innerHTML='<div class="empty" style="padding:1.5rem"><p>No hay clientes activos con honorario cargado.</p></div>';
+    return;
+  }
+
+  const mesStr=String(mes).padStart(2,'0');
+  const prefijo=`${anio}-${mesStr}`;
+
+  // Para cada cliente, buscar si ya tiene cobro en este mes
+  const rows=clientes.map(c=>{
+    const cobro=db.cobros.find(cb=>
+      cb.cliente_id===c.id &&
+      cb.estado==='cobrado' &&
+      (cb.fecha_cobro||'').startsWith(prefijo)
+    );
+    const pendiente=db.cobros.find(cb=>
+      cb.cliente_id===c.id &&
+      cb.estado==='pendiente' &&
+      (cb.vencimiento||cb.fecha_cobro||'').startsWith(prefijo)
+    );
+    return{cliente:c, cobro, pendiente};
+  });
+
+  const cobrados=rows.filter(r=>r.cobro).length;
+  const total=rows.filter(r=>r.cobro).reduce((s,r)=>s+Number(r.cobro.importe||0),0);
+  if(resumen) resumen.innerHTML=`<span style="color:var(--ok);font-weight:500">${cobrados} cobrados</span> / ${clientes.length} · ${fmt$(total)}`;
+
+  lista.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr>
+      <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Cliente</th>
+      <th style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Honorario</th>
+      <th style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Importe a cobrar</th>
+      <th style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Medio</th>
+      <th style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border)">Estado</th>
+      <th style="padding:8px 12px;border-bottom:1px solid var(--border)"></th>
+    </tr></thead>
+    <tbody>
+    ${rows.map(({cliente:c, cobro, pendiente})=>{
+      const isCobrado=!!cobro;
+      const cobroId=cobro?.id||pendiente?.id||null;
+      const importeDefault=cobro?.importe||c.honorario;
+      const fechaDefault=cobro?.fecha_cobro||new Date().toISOString().slice(0,10);
+      const medioDefault=cobro?.medio||'Transferencia';
+      const cid=`cgm-${c.id}`;
+      return`<tr style="border-bottom:1px solid var(--border);background:${isCobrado?'var(--ok-light)':'transparent'}">
+        <td style="padding:10px 12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="avatar" style="width:28px;height:28px;font-size:10px;${isCobrado?'background:var(--ok);color:white':''}">${initials(c.nombre)}</div>
+            <div>
+              <div style="font-weight:500">${c.nombre}</div>
+              <div style="font-size:11px;color:var(--text3)">${c.categoria||''}</div>
+            </div>
+          </div>
+        </td>
+        <td style="padding:10px 12px;text-align:center;font-weight:500">${fmt$(c.honorario)}</td>
+        <td style="padding:6px 12px">
+          <input type="number" id="${cid}-importe" value="${importeDefault}" min="0" step="100"
+            style="width:110px;font-size:13px;text-align:right;${isCobrado?'color:var(--ok);font-weight:600':''}">
+        </td>
+        <td style="padding:6px 12px">
+          <select id="${cid}-medio" style="width:auto;font-size:12px">
+            <option value="Transferencia" ${medioDefault==='Transferencia'?'selected':''}>Transferencia</option>
+            <option value="Efectivo" ${medioDefault==='Efectivo'?'selected':''}>Efectivo</option>
+            <option value="Cheque" ${medioDefault==='Cheque'?'selected':''}>Cheque</option>
+            <option value="Otro" ${medioDefault==='Otro'?'selected':''}>Otro</option>
+          </select>
+        </td>
+        <td style="padding:10px 12px;text-align:center">
+          ${isCobrado
+            ?`<span class="badge badge-ok">✓ Cobrado ${cobro.fecha_cobro?cobro.fecha_cobro.slice(8,10)+'/'+cobro.fecha_cobro.slice(5,7):''}</span>`
+            :`<span class="badge badge-neutral">Pendiente</span>`}
+        </td>
+        <td style="padding:6px 12px;text-align:right;white-space:nowrap">
+          ${isCobrado
+            ?`<button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger);font-size:11px"
+                onclick="desmarcarCobradoMensual('${cobroId}')">✕ Desmarcar</button>`
+            :`<button class="btn btn-sm btn-primary" style="font-size:11px"
+                onclick="marcarCobradoMensual('${c.id}','${cid}',${mes},${anio},${cobroId?`'${cobroId}'`:'null'})">✓ Cobrado</button>`}
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function marcarCobradoMensual(clienteId, cid, mes, anio, cobroId){
+  const c=db.clientes.find(x=>x.id===clienteId);
+  if(!c)return;
+  const importe=Number(document.getElementById(`${cid}-importe`)?.value||c.honorario);
+  const medio=document.getElementById(`${cid}-medio`)?.value||'Transferencia';
+  const mesStr=String(mes).padStart(2,'0');
+  const hoy=new Date().toISOString().slice(0,10);
+  const data={
+    cliente_id:clienteId,
+    concepto:`Honorarios ${MESES[mes]} ${anio}`,
+    importe,
+    medio,
+    estado:'cobrado',
+    fecha_cobro:hoy,
+    vencimiento:`${anio}-${mesStr}-01`,
+    created_by:currentUser.id
+  };
+  setSyncing(true);
+  let res;
+  if(cobroId){
+    res=await sb.from('cobros').update(data).eq('id',cobroId).select().single();
+  } else {
+    res=await sb.from('cobros').insert(data).select().single();
+  }
+  setSyncing(false);
+  if(res.error){toast('Error: '+res.error.message);return;}
+  if(cobroId){
+    const i=db.cobros.findIndex(x=>x.id===cobroId);
+    if(i>=0)db.cobros[i]=res.data; else db.cobros.push(res.data);
+  } else {
+    db.cobros.push(res.data);
+  }
+  renderGestionMensual();
+  renderCobros();
+  renderAll();
+}
+
+async function desmarcarCobradoMensual(cobroId){
+  if(!cobroId)return;
+  setSyncing(true);
+  const res=await sb.from('cobros').update({estado:'pendiente',fecha_cobro:null}).eq('id',cobroId).select().single();
+  setSyncing(false);
+  if(res.error){toast('Error: '+res.error.message);return;}
+  const i=db.cobros.findIndex(x=>x.id===cobroId);
+  if(i>=0)db.cobros[i]=res.data;
+  renderGestionMensual();
+  renderCobros();
+  renderAll();
+}
+
 function filterCobros(f,el){cobrosFiltro=f;document.querySelectorAll('#s-cobros .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderCobros();}
 let cobrosStatsVisible=false;
 function toggleCobrosStats(){

@@ -77,6 +77,9 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--t
 .stat-warn .stat-value{color:var(--warn)}
 .stat-danger .stat-value{color:var(--danger)}
 .table-wrap{overflow-x:auto}
+th[onclick]{transition:opacity .15s}
+th[onclick]:hover{opacity:.75}
+th[onclick] span{font-size:10px;opacity:.6;margin-left:3px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:7px 10px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
@@ -237,6 +240,9 @@ textarea{height:80px;resize:vertical}
       </button>
       <button class="nav-item" onclick="nav('afip',this)" style="color:var(--afip)">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>AFIP / Accesos
+      </button>
+      <button class="nav-item" onclick="nav('ganancias',this)" style="color:var(--ok)">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>DDJJ Ganancias
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -746,6 +752,330 @@ textarea{height:80px;resize:vertical}
           <div id="empty-accesos" class="empty" style="display:none"><p>No hay accesos guardados. Agregá el primero.</p></div>
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECCIÓN: DDJJ GANANCIAS                                -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div class="section" id="s-ganancias">
+
+        <!-- ALERTAS / ESTADO -->
+        <div id="gan-alert"></div>
+
+        <!-- TABS PRINCIPALES -->
+        <div class="tabs" style="margin-bottom:1rem">
+          <button class="tab active" id="gan-tab-btn-ventas" onclick="ganTab('ventas',this)">📤 IVA Ventas</button>
+          <button class="tab" id="gan-tab-btn-compras" onclick="ganTab('compras',this)">📥 IVA Compras</button>
+          <button class="tab" id="gan-tab-btn-resultado" onclick="ganTab('resultado',this)">📊 Resultado Impositivo</button>
+          <button class="tab" id="gan-tab-btn-deducciones" onclick="ganTab('deducciones',this)">👤 Deducciones Personales</button>
+        </div>
+
+        <!-- TAB: IVA VENTAS -->
+        <div id="gan-panel-ventas">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Libro IVA Ventas</div>
+                <div class="card-subtitle">Importá el Excel del Libro IVA Digital de AFIP o ingresá manualmente</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="file" id="gan-input-ventas" accept=".xlsx,.xls" multiple style="display:none" onchange="ganImportarVentas(this)">
+                <button class="btn btn-sm" onclick="document.getElementById('gan-input-ventas').click()">📂 Importar Excel(s)</button>
+                <button class="btn btn-sm btn-primary" onclick="ganAgregarVenta()">+ Agregar fila</button>
+              </div>
+            </div>
+            <div class="alert alert-afip" style="margin-bottom:1rem;font-size:12px">
+              💡 <strong>Formato esperado:</strong> Fecha · Descripción · Tipo Comprobante · Neto Gravado · IVA 21% · IVA 10,5% · Total. Las columnas se mapean automáticamente del libro IVA Digital de ARCA.
+            </div>
+            <div class="table-wrap">
+              <table id="gan-tabla-ventas">
+                <thead>
+                  <tr>
+                    <th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="ganOrdenarVentas()" id="gan-th-fecha-v">Fecha <span id="gan-sort-icon-v">↕</span></th>
+                    <th style="min-width:200px">Cliente / Descripción</th>
+                    <th>Tipo Cbte.</th>
+                    <th style="text-align:right">Neto Gravado ($)</th>
+                    <th style="text-align:right">IVA 21% ($)</th>
+                    <th style="text-align:right">IVA 10,5% ($)</th>
+                    <th style="text-align:right">Total ($)</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="gan-body-ventas"></tbody>
+                <tfoot>
+                  <tr style="background:var(--accent-light)">
+                    <td colspan="3" style="font-weight:600;font-size:12px;color:var(--accent);padding:10px">TOTALES</td>
+                    <td style="text-align:right;font-weight:700;color:var(--accent)" id="gan-tot-neto-v"></td>
+                    <td style="text-align:right;font-weight:600;color:var(--accent)" id="gan-tot-iva21-v"></td>
+                    <td style="text-align:right;font-weight:600;color:var(--accent)" id="gan-tot-iva105-v"></td>
+                    <td style="text-align:right;font-weight:700;color:var(--accent)" id="gan-tot-total-v"></td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div id="gan-empty-ventas" class="empty" style="display:none"><p>Sin comprobantes. Importá el Excel o agregá filas manualmente.</p></div>
+          </div>
+        </div>
+
+        <!-- TAB: IVA COMPRAS -->
+        <div id="gan-panel-compras" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Libro IVA Compras y Gastos</div>
+                <div class="card-subtitle">Clasificá cada gasto como Costo, Deducible o No Deducible (LIG art. 85/91/92)</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="file" id="gan-input-compras" accept=".xlsx,.xls" multiple style="display:none" onchange="ganImportarCompras(this)">
+                <button class="btn btn-sm" onclick="document.getElementById('gan-input-compras').click()">📂 Importar Excel(s)</button>
+                <button class="btn btn-sm btn-primary" onclick="ganAgregarCompra()">+ Agregar fila</button>
+              </div>
+            </div>
+            <div class="alert" style="background:var(--warn-light);color:var(--warn);border:1px solid #e6c26a;margin-bottom:1rem;font-size:12px">
+              ⚠️ <strong>Clasificación obligatoria:</strong> <strong>Costo</strong> = mercadería/mat. primas (art. 58-65 LIG) · <strong>Deducible</strong> = gastos admitidos (art. 85-91 LIG) · <strong>No Deducible</strong> = gastos rechazados (art. 92 LIG)
+            </div>
+
+            <!-- Filtro por clasificación -->
+            <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
+              <span style="font-size:12px;color:var(--text3)">Filtrar:</span>
+              <button class="btn btn-sm" id="gan-fil-todos" onclick="ganFiltrarCompras('todos',this)" style="background:var(--accent);color:white;border-color:var(--accent)">Todos</button>
+              <button class="btn btn-sm" id="gan-fil-costo" onclick="ganFiltrarCompras('Costo',this)">Costos</button>
+              <button class="btn btn-sm" id="gan-fil-deducible" onclick="ganFiltrarCompras('Deducible',this)">Deducibles</button>
+              <button class="btn btn-sm" id="gan-fil-noded" onclick="ganFiltrarCompras('No Deducible',this)">No Deducibles</button>
+              <button class="btn btn-sm" id="gan-fil-sinclasif" onclick="ganFiltrarCompras('',this)" style="border-color:var(--warn);color:var(--warn)">Sin clasificar</button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="ganOrdenarCompras()" id="gan-th-fecha-c">Fecha <span id="gan-sort-icon-c">↕</span></th>
+                    <th style="min-width:200px">Proveedor / Descripción</th>
+                    <th>Tipo Cbte.</th>
+                    <th style="text-align:right">Neto ($)</th>
+                    <th style="text-align:right">IVA CF ($)</th>
+                    <th style="text-align:right">Total ($)</th>
+                    <th style="min-width:140px">Clasificación</th>
+                    <th>Observ.</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="gan-body-compras"></tbody>
+                <tfoot>
+                  <tr style="background:var(--surface2)">
+                    <td colspan="3" style="font-weight:600;font-size:12px;padding:10px">TOTALES</td>
+                    <td style="text-align:right;font-weight:700" id="gan-tot-neto-c"></td>
+                    <td style="text-align:right;font-weight:600" id="gan-tot-iva-c"></td>
+                    <td style="text-align:right;font-weight:700" id="gan-tot-total-c"></td>
+                    <td colspan="3"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div id="gan-empty-compras" class="empty" style="display:none"><p>Sin comprobantes. Importá el Excel o agregá filas manualmente.</p></div>
+
+            <!-- Subtotales por clasificación -->
+            <div style="margin-top:1.25rem;border-top:1px solid var(--border);padding-top:1rem">
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Resumen por clasificación</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="gan-resumen-clasif">
+                <div class="stat-card stat-ok"><div class="stat-label">Costos</div><div class="stat-value" id="gan-sub-costo">$0</div><div class="stat-sub">art. 58-65 LIG</div></div>
+                <div class="stat-card"><div class="stat-label">Deducibles</div><div class="stat-value" id="gan-sub-deducible" style="color:var(--blue)">$0</div><div class="stat-sub">art. 85-91 LIG</div></div>
+                <div class="stat-card stat-danger"><div class="stat-label">No Deducibles</div><div class="stat-value" id="gan-sub-noded">$0</div><div class="stat-sub">art. 92 LIG</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: RESULTADO IMPOSITIVO -->
+        <div id="gan-panel-resultado" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 340px;gap:1rem;align-items:start">
+
+            <!-- Columna izquierda: tabla de determinación -->
+            <div>
+              <!-- I. Ingresos -->
+              <div class="card" style="margin-bottom:1rem">
+                <div class="card-header" style="margin-bottom:.75rem">
+                  <div class="card-title">I — Ingresos Gravados <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 2° y 53° LIG)</span></div>
+                </div>
+                <div id="gan-bloque-ingresos">
+                  <div class="venc-row"><span>Ventas netas gravadas (sin IVA)</span><span style="font-weight:600" id="gr-ventas-netas">$0,00</span></div>
+                  <div class="venc-row">
+                    <span>(-) Devoluciones y descuentos <span style="color:var(--text3);font-size:11px">(editable)</span></span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="color:var(--text3)">$</span>
+                      <input type="number" id="gr-devoluciones" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()">
+                    </div>
+                  </div>
+                  <div class="venc-row" style="background:var(--accent-light);border-radius:var(--radius);padding:10px;margin-top:4px;border:none">
+                    <strong style="color:var(--accent)">= Ingresos Netos del Período</strong>
+                    <strong style="font-size:16px;color:var(--accent)" id="gr-ing-netos">$0,00</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- II. Costo de Ventas -->
+              <div class="card" style="margin-bottom:1rem">
+                <div class="card-header" style="margin-bottom:.75rem">
+                  <div class="card-title">II — Costo de Ventas <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 58° a 65° LIG)</span></div>
+                </div>
+                <div class="venc-row">
+                  <span>(+) Existencia inicial bienes de cambio</span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-exist-ini" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row"><span>(+) Compras/Costos del período (desde IVA Compras)</span><span style="font-weight:600" id="gr-costos-per">$0,00</span></div>
+                <div class="venc-row">
+                  <span>(-) Existencia final bienes de cambio</span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-exist-fin" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row" style="background:var(--surface2);border-radius:var(--radius);padding:10px;margin-top:4px;border:none">
+                  <strong>= Costo de Ventas</strong>
+                  <strong style="font-size:16px" id="gr-costo-ventas">$0,00</strong>
+                </div>
+              </div>
+
+              <!-- Resultado Bruto -->
+              <div class="card" style="margin-bottom:1rem;border:2px solid var(--warn);background:var(--warn-light)">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0">
+                  <span style="font-weight:700;color:var(--warn);font-size:15px">▶ Resultado Bruto</span>
+                  <span style="font-weight:700;font-size:20px;font-family:var(--serif);color:var(--warn)" id="gr-resultado-bruto">$0,00</span>
+                </div>
+                <div style="font-size:11px;color:var(--warn);opacity:.8">Ingresos Netos − Costo de Ventas (art. 53° LIG)</div>
+              </div>
+
+              <!-- III. Gastos Deducibles -->
+              <div class="card" style="margin-bottom:1rem">
+                <div class="card-header" style="margin-bottom:.75rem">
+                  <div class="card-title">III — Gastos Deducibles <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 85° a 91° LIG)</span></div>
+                </div>
+                <div class="venc-row"><span>Gastos deducibles del período (desde IVA Compras)</span><span style="font-weight:600" id="gr-gastos-ded">$0,00</span></div>
+                <div class="venc-row">
+                  <span>Amortizaciones bienes de uso <span style="color:var(--text3);font-size:11px">(art. 87° LIG)</span></span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-amortizaciones" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row">
+                  <span>Previsiones malos créditos <span style="color:var(--text3);font-size:11px">(art. 87° inc. b)</span></span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-previsiones" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row">
+                  <span>Otros gastos deducibles admitidos</span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-otros-ded" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row" style="background:var(--blue-light);border-radius:var(--radius);padding:10px;margin-top:4px;border:none">
+                  <strong style="color:var(--blue)">= Total Gastos Deducibles</strong>
+                  <strong style="font-size:16px;color:var(--blue)" id="gr-total-ded">$0,00</strong>
+                </div>
+              </div>
+
+              <!-- IV. Ajustes Impositivos -->
+              <div class="card" style="margin-bottom:1rem">
+                <div class="card-header" style="margin-bottom:.75rem">
+                  <div class="card-title">IV — Ajustes Impositivos <span style="font-size:12px;font-weight:400;color:var(--text3)">(Título VI y otros)</span></div>
+                </div>
+                <div class="venc-row">
+                  <span>Ajuste por inflación impositivo <span style="color:var(--text3);font-size:11px">(art. 95° LIG — Tít. VI)</span></span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-aj-inflacion" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row">
+                  <span>Diferencias de cambio impositivas <span style="color:var(--text3);font-size:11px">(art. 72° LIG)</span></span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-aj-cambio" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row">
+                  <span>Renta financiera gravada <span style="color:var(--text3);font-size:11px">(art. 95° LIG)</span></span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-renta-fin" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row">
+                  <span>Quebrantos de ej. anteriores (−) <span style="color:var(--text3);font-size:11px">(art. 19° LIG)</span></span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-quebrantos" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+                <div class="venc-row">
+                  <span>Otros ajustes (+/−)</span>
+                  <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-otros-aj" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna derecha: resumen ejecutivo -->
+            <div style="position:sticky;top:1rem">
+              <!-- Resultado Final -->
+              <div class="card" style="border:2px solid var(--accent);background:var(--accent-light);margin-bottom:1rem">
+                <div style="font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Resultado Impositivo Final</div>
+                <div style="font-family:var(--serif);font-size:32px;color:var(--accent);margin-bottom:4px" id="gr-resultado-final">$0,00</div>
+                <div style="font-size:12px;color:var(--accent);opacity:.8" id="gr-resultado-tipo">—</div>
+              </div>
+
+              <!-- Cuadro resumen -->
+              <div class="card" style="margin-bottom:1rem">
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em">Cuadro resumen</div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Ingresos netos</span><span id="res-ing">$0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(−) Costo de ventas</span><span id="res-costo">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid var(--border);padding-top:6px"><span>= Resultado bruto</span><span id="res-bruto">$0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(−) Gastos deducibles</span><span id="res-ded">$0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(±) Ajustes impositivos</span><span id="res-aj">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;font-weight:700;border-top:2px solid var(--accent);padding-top:6px;color:var(--accent)"><span>= Resultado impositivo</span><span id="res-imp">$0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(−) Deduc. personales</span><span id="res-pers">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;font-weight:700;border-top:2px solid var(--ok);padding-top:6px;color:var(--ok)"><span>= BASE IMPONIBLE NETA</span><span id="res-base">$0</span></div>
+                </div>
+              </div>
+
+              <!-- Botón descargar Excel -->
+              <button class="btn btn-primary" onclick="ganDescargarExcel()" style="width:100%;justify-content:center;gap:8px">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Descargar Excel DDJJ
+              </button>
+              <div style="font-size:11px;color:var(--text3);margin-top:6px;text-align:center">5 hojas: IVA Ventas · IVA Compras · Resultado · Deducciones · Resumen</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: DEDUCCIONES PERSONALES -->
+        <div id="gan-panel-deducciones" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:1rem;align-items:start">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Deducciones Personales <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 30° LIG)</span></div>
+                  <div class="card-subtitle">Personas Humanas — Período Fiscal 2025. Actualizar montos según tabla AFIP vigente.</div>
+                </div>
+              </div>
+              <div class="alert alert-afip" style="margin-bottom:1rem;font-size:12px">
+                📋 <strong>Tip:</strong> Tildá ✔ solo las deducciones que aplican. Los montos se suman automáticamente y afectan la base imponible final.
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width:40px">Aplica</th>
+                      <th>Concepto</th>
+                      <th style="text-align:right;width:180px">Monto Anual ($)</th>
+                      <th style="width:160px">Base Legal</th>
+                    </tr>
+                  </thead>
+                  <tbody id="gan-body-deducciones"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Panel derecho deducciones -->
+            <div style="position:sticky;top:1rem">
+              <div class="card" style="border:2px solid var(--ok);background:var(--ok-light);margin-bottom:1rem">
+                <div style="font-size:11px;color:var(--ok);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Total Deducciones Personales</div>
+                <div style="font-family:var(--serif);font-size:28px;color:var(--ok);margin-bottom:4px" id="ded-total-display">$0,00</div>
+                <div style="font-size:11px;color:var(--ok);opacity:.8">Solo se suman las marcadas ✔</div>
+              </div>
+              <div class="card">
+                <div style="font-size:12px;font-weight:600;margin-bottom:.75rem;color:var(--text2)">Integración con resultado</div>
+                <div style="font-size:13px;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Resultado impositivo</span><span id="ded-res-imp">$0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(−) Deduc. personales</span><span id="ded-res-ded">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;font-weight:700;border-top:2px solid var(--ok);padding-top:6px;color:var(--ok)"><span>= BASE IMPONIBLE</span><span id="ded-res-base">$0</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /s-ganancias -->
 
     </div>
   </div>
@@ -3791,6 +4121,678 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementB
    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
  ═══════════════════════════════════════════════════════════════════
 */
+
+// ═══════════════════════════════════════════════════════════════════
+// MÓDULO DDJJ GANANCIAS — Ley 20.628 y modificatorias
+// ═══════════════════════════════════════════════════════════════════
+
+// Estado del módulo
+const GAN = {
+  ventas: [],
+  compras: [],
+  filtroCompras: 'todos',
+  deducciones: [],
+  sortV: null,   // null | 'asc' | 'desc'
+  sortC: null,
+};
+
+// Montos GNI 2025 — art. 30 LIG (actualizar según AFIP)
+const DEDUCCIONES_LIG = [
+  {concepto:'Ganancia No Imponible (art. 30 inc. a)', monto:3091035, base:'art. 30 inc. a LIG', aplica:true},
+  {concepto:'Cónyuge (art. 30 inc. b.1)', monto:2892888, base:'art. 30 inc. b.1 LIG', aplica:false},
+  {concepto:'Hijo/a menor 18 años (art. 30 inc. b.2)', monto:1456779, base:'art. 30 inc. b.2 LIG', aplica:false},
+  {concepto:'Otros familiares a cargo (art. 30 inc. b.3)', monto:728389, base:'art. 30 inc. b.3 LIG', aplica:false},
+  {concepto:'Deducción Especial — Relación de dependencia (art. 30 inc. c ×3,8)', monto:11746733, base:'art. 30 inc. c LIG', aplica:false},
+  {concepto:'Deducción Especial — Autónomos (art. 30 inc. c ×1,5)', monto:4636553, base:'art. 30 inc. c LIG', aplica:false},
+  {concepto:'Servicio doméstico (Ley 26.063 art. 16 — tope GNI)', monto:3091035, base:'Ley 26.063', aplica:false},
+  {concepto:'Intereses crédito hipotecario (art. 85 inc. a — tope $20.000 anual)', monto:20000, base:'art. 85 inc. a LIG', aplica:false},
+  {concepto:'Alquiler casa habitación (art. 85 inc. b — 40% tope GNI)', monto:1236414, base:'art. 85 inc. b LIG', aplica:false},
+  {concepto:'Medicina prepaga (art. 85 inc. g — tope 5% GNI)', monto:154552, base:'art. 85 inc. g LIG', aplica:false},
+  {concepto:'Aportes jubilatorios obligatorios (art. 85 inc. c)', monto:0, base:'art. 85 inc. c LIG', aplica:false},
+  {concepto:'Donaciones a entidades reconocidas AFIP (art. 85 inc. e — tope 5%)', monto:0, base:'art. 85 inc. e LIG', aplica:false},
+  {concepto:'Seguro de vida/retiro (art. 85 inc. b — tope AFIP)', monto:0, base:'art. 85 inc. b LIG', aplica:false},
+  {concepto:'Honorarios médicos/odontológicos (art. 85 inc. h — 40% facturado tope 5% GNI)', monto:0, base:'art. 85 inc. h LIG', aplica:false},
+  {concepto:'Gastos de sepelio (art. 85 inc. f — tope AFIP)', monto:0, base:'art. 85 inc. f LIG', aplica:false},
+  {concepto:'Gastos de educación hijos (art. 85 inc. i — tope GNI)', monto:0, base:'art. 85 inc. i LIG', aplica:false},
+  {concepto:'Otras deducciones personales admitidas (art. 85 LIG)', monto:0, base:'art. 85 LIG', aplica:false},
+];
+
+function ganReiniciar(){
+  // Modal de confirmación inline
+  const existe = document.getElementById('gan-modal-reiniciar');
+  if(existe) existe.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'gan-modal-reiniciar';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:var(--radius-lg);padding:2rem;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--danger-light);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+        <svg width="22" height="22" fill="none" stroke="var(--danger)" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </div>
+      <div style="font-family:var(--serif);font-size:18px;margin-bottom:.5rem">¿Reiniciar la DDJJ?</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.5">
+        Se borrarán <strong>todos los comprobantes</strong> de IVA Ventas e IVA Compras, y se restablecerán los ajustes y deducciones a sus valores iniciales.<br>
+        <span style="color:var(--danger);font-size:12px">Esta acción no se puede deshacer.</span>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button class="btn" onclick="document.getElementById('gan-modal-reiniciar').remove()" style="min-width:110px">Cancelar</button>
+        <button class="btn" onclick="ganConfirmarReiniciar()" style="min-width:110px;background:var(--danger);color:white;border-color:var(--danger)">Sí, reiniciar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  // Cerrar al hacer clic fuera
+  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
+}
+
+function ganConfirmarReiniciar(){
+  // Limpiar datos
+  GAN.ventas = [];
+  GAN.compras = [];
+  GAN.sortV = null;
+  GAN.sortC = null;
+  GAN.filtroCompras = 'todos';
+  GAN.deducciones = DEDUCCIONES_LIG.map(d=>({...d}));
+
+  // Resetear inputs editables del resultado
+  ['gr-devoluciones','gr-exist-ini','gr-exist-fin','gr-amortizaciones',
+   'gr-previsiones','gr-otros-ded','gr-aj-inflacion','gr-aj-cambio',
+   'gr-renta-fin','gr-quebrantos','gr-otros-aj'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = 0;
+  });
+
+  // Resetear icono de orden
+  const iv = document.getElementById('gan-sort-icon-v');
+  const ic = document.getElementById('gan-sort-icon-c');
+  if(iv) iv.textContent = '↕';
+  if(ic) ic.textContent = '↕';
+
+  // Resetear filtro compras a "todos"
+  document.querySelectorAll('[id^=gan-fil-]').forEach(b=>{
+    b.style.background=''; b.style.color=''; b.style.borderColor='';
+  });
+  const btnTodos = document.getElementById('gan-fil-todos');
+  if(btnTodos){ btnTodos.style.background='var(--accent)'; btnTodos.style.color='white'; btnTodos.style.borderColor='var(--accent)'; }
+
+  // Volver al primer tab
+  ganTab('ventas', document.getElementById('gan-tab-btn-ventas'));
+
+  // Re-renderizar todo
+  ganRenderVentas();
+  ganRenderCompras();
+  ganRenderDeducciones();
+  ganRecalcular();
+
+  document.getElementById('gan-modal-reiniciar').remove();
+  toast('🔄 DDJJ reiniciada — todos los datos fueron eliminados', 'ok');
+}
+
+function ganInit(){
+  if(!GAN.deducciones.length){
+    GAN.deducciones = DEDUCCIONES_LIG.map(d=>({...d}));
+  }
+  ganRenderVentas();
+  ganRenderCompras();
+  ganRenderDeducciones();
+  ganRecalcular();
+}
+
+// ── NAVEGACIÓN DE TABS ──────────────────────────────────────────
+function ganTab(tab, el){
+  ['ventas','compras','resultado','deducciones'].forEach(t=>{
+    document.getElementById('gan-panel-'+t).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('gan-tab-btn-'+t).classList.toggle('active', t===tab);
+  });
+  if(tab==='resultado'||tab==='deducciones') ganRecalcular();
+}
+
+// ── FORMATO PESOS ───────────────────────────────────────────────
+function fmtPesos(n){ return '$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function parsePesos(s){ return parseFloat(String(s).replace(/[^0-9.\-]/g,'')||0)||0; }
+
+// ── IMPORTAR EXCEL VENTAS ───────────────────────────────────────
+// ── UTILIDAD: parsear fecha de cualquier formato Excel / AFIP ──────
+// Soporta: número serial Excel, DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY, JS Date
+function ganParseFecha(raw){
+  if(!raw && raw!==0) return '';
+  // Número serial de Excel (p.ej. 45678)
+  if(typeof raw === 'number'){
+    // Excel serial → JS Date (epoch Excel: 1 enero 1900 = 1, con bug año bisiesto 1900)
+    const d = new Date(Math.round((raw - 25569) * 86400 * 1000));
+    if(!isNaN(d)){
+      const y = d.getUTCFullYear(), m = String(d.getUTCMonth()+1).padStart(2,'0'), dd = String(d.getUTCDate()).padStart(2,'0');
+      return `${y}-${m}-${dd}`;
+    }
+  }
+  const s = String(raw).trim();
+  // Ya en formato YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  // Formato DD/MM/YYYY o DD-MM-YYYY
+  const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
+  // Formato YYYY/MM/DD
+  const m2 = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m2) return `${m2[1]}-${m2[2].padStart(2,'0')}-${m2[3].padStart(2,'0')}`;
+  // Intentar parsear como Date nativo
+  const d2 = new Date(s);
+  if(!isNaN(d2)){
+    const y = d2.getFullYear(), m = String(d2.getMonth()+1).padStart(2,'0'), dd = String(d2.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+  return '';
+}
+
+// ── HELPER: parsear un archivo Excel de IVA (ventas o compras) ──
+function ganParsearArchivoIVA(arrayBuffer, modo){
+  // modo: 'ventas' | 'compras'
+  const wb = XLSX.read(new Uint8Array(arrayBuffer), {type:'array', cellDates:true});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows    = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
+  const rowsRaw = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
+
+  let headerRow = 0;
+  for(let i=0;i<Math.min(rows.length,10);i++){
+    const r = rows[i].map(c=>String(c).toLowerCase());
+    if(r.some(c=>c.includes('fecha')||c.includes('neto')||c.includes('comprobante')||c.includes('proveedor')||c.includes('cliente')))
+      { headerRow=i; break; }
+  }
+  const headers = rows[headerRow].map(c=>String(c).toLowerCase().trim());
+  const findCol = (...terms) => {
+    for(const t of terms){ const x=headers.findIndex(h=>h===t); if(x>=0) return x; }
+    for(const t of terms){ const x=headers.findIndex(h=>h.includes(t)); if(x>=0) return x; }
+    return -1;
+  };
+
+  const iF   = findCol('fecha');
+  const iD   = findCol('denominación','razón social','razon social','proveedor','cliente','descripcion','nombre');
+  const iT   = findCol('tipo de comprobante','tipo comprobante','tipo cbte','tipo');
+  const iTot = findCol('importe total','total comprobante','total');
+  const iN21  = findCol('neto gravado iva 21','neto gravado 21');
+  const iN105 = findCol('neto gravado iva 10,5','neto gravado iva 10.5','neto gravado 10,5','neto gravado 10.5');
+  const iN5   = findCol('neto gravado iva 5%','neto gravado iva 5','neto gravado 5%','neto gravado 5');
+  const iN25  = findCol('neto gravado iva 2,5','neto gravado 2,5');
+  const iN27  = findCol('neto gravado iva 27','neto gravado 27');
+  const iNgen = findCol('neto gravado','neto_gravado','importe neto gravado','importe neto');
+  const iIVA21  = findCol('importe iva 21','iva 21%','iva 21','iva21');
+  const iIVA105 = findCol('importe iva 10,5','importe iva 10.5','iva 10,5','iva 10.5','iva 10','iva10');
+  const iIVA5   = findCol('importe iva 5%','importe iva 5','iva 5%','iva 5');
+  const iIVA25  = findCol('importe iva 2,5','importe iva 2.5','iva 2,5');
+  const iIVA27  = findCol('importe iva 27','iva 27');
+  const iIVAgen = findCol('crédito fiscal','credito fiscal','impuesto liquidado');
+
+  let added = 0;
+  for(let i=headerRow+1;i<rows.length;i++){
+    const r=rows[i]; const rRaw=rowsRaw[i]||[];
+    let neto=0;
+    if(iN21>=0||iN105>=0||iN5>=0||iN25>=0||iN27>=0)
+      neto=parsePesos(r[iN21])+parsePesos(r[iN105])+parsePesos(r[iN5])+parsePesos(r[iN25])+parsePesos(r[iN27]);
+    else if(iNgen>=0) neto=parsePesos(r[iNgen]);
+    const iva21=parsePesos(r[iIVA21]), iva105=parsePesos(r[iIVA105]);
+    const iva5=parsePesos(r[iIVA5]),   iva25=parsePesos(r[iIVA25]), iva27=parsePesos(r[iIVA27]);
+    let ivaGen=0;
+    if(!iva21&&!iva105&&!iva5&&!iva25&&!iva27&&iIVAgen>=0) ivaGen=parsePesos(r[iIVAgen]);
+    const ivaTotal=iva21+iva105+iva5+iva25+iva27+ivaGen;
+    const total=parsePesos(r[iTot])||(neto+ivaTotal);
+    if(!neto&&!ivaTotal&&!total) continue;
+    const fechaRaw=iF>=0?(rRaw[iF]!==undefined?rRaw[iF]:r[iF]):'';
+    if(modo==='ventas'){
+      GAN.ventas.push({ fecha:ganParseFecha(fechaRaw), desc:iD>=0?String(r[iD]):'',
+        tipo:iT>=0?String(r[iT]):'FA', neto, iva21:iva21+iva27, iva105:iva105+iva5+iva25, total });
+    } else {
+      GAN.compras.push({ fecha:ganParseFecha(fechaRaw), desc:iD>=0?String(r[iD]):'',
+        tipo:iT>=0?String(r[iT]):'FA', neto, iva:ivaTotal, total, clasif:'', obs:'' });
+    }
+    added++;
+  }
+  return added;
+}
+
+// ── IMPORTAR MÚLTIPLES EXCEL — VENTAS ───────────────────────────
+function ganImportarVentas(input){
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  let completados=0, totalAgregados=0;
+  const resumen=[];
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const added=ganParsearArchivoIVA(e.target.result,'ventas');
+        totalAgregados+=added;
+        resumen.push(`<strong>${file.name}</strong>: ${added} cbtes.`);
+      } catch(err){
+        resumen.push(`<strong>${file.name}</strong>: ❌ ${err.message}`);
+      }
+      if(++completados===files.length){
+        input.value='';
+        ganRenderVentas();
+        ganRecalcular();
+        toast(`✅ ${totalAgregados} comprobante${totalAgregados!==1?'s':''} importados desde ${files.length} archivo${files.length>1?'s':''}<br><span style="font-size:11px;opacity:.85">${resumen.join(' &nbsp;·&nbsp; ')}</span>`,'ok');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── IMPORTAR MÚLTIPLES EXCEL — COMPRAS ──────────────────────────
+function ganImportarCompras(input){
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  let completados=0, totalAgregados=0;
+  const resumen=[];
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const added=ganParsearArchivoIVA(e.target.result,'compras');
+        totalAgregados+=added;
+        resumen.push(`<strong>${file.name}</strong>: ${added} cbtes.`);
+      } catch(err){
+        resumen.push(`<strong>${file.name}</strong>: ❌ ${err.message}`);
+      }
+      if(++completados===files.length){
+        input.value='';
+        ganRenderCompras();
+        ganRecalcular();
+        toast(`✅ ${totalAgregados} comprobante${totalAgregados!==1?'s':''} importados desde ${files.length} archivo${files.length>1?'s':''}<br><span style="font-size:11px;opacity:.85">${resumen.join(' &nbsp;·&nbsp; ')}</span>`,'ok');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── ORDENAR POR FECHA ────────────────────────────────────────────
+function ganOrdenarVentas(){
+  GAN.sortV = GAN.sortV === 'asc' ? 'desc' : 'asc';
+  GAN.ventas.sort((a,b)=>{
+    const da = a.fecha||'', db = b.fecha||'';
+    return GAN.sortV==='asc' ? da.localeCompare(db) : db.localeCompare(da);
+  });
+  const icon = document.getElementById('gan-sort-icon-v');
+  if(icon) icon.textContent = GAN.sortV==='asc' ? '↑' : '↓';
+  ganRenderVentas();
+}
+
+function ganOrdenarCompras(){
+  GAN.sortC = GAN.sortC === 'asc' ? 'desc' : 'asc';
+  GAN.compras.sort((a,b)=>{
+    const da = a.fecha||'', db = b.fecha||'';
+    return GAN.sortC==='asc' ? da.localeCompare(db) : db.localeCompare(da);
+  });
+  const icon = document.getElementById('gan-sort-icon-c');
+  if(icon) icon.textContent = GAN.sortC==='asc' ? '↑' : '↓';
+  ganRenderCompras();
+}
+
+// ── RENDER VENTAS ────────────────────────────────────────────────
+function ganRenderVentas(){
+  const tbody = document.getElementById('gan-body-ventas');
+  const empty = document.getElementById('gan-empty-ventas');
+  if(!GAN.ventas.length){ tbody.innerHTML=''; empty.style.display='block'; ganActualizarTotVentas(); return; }
+  empty.style.display='none';
+  tbody.innerHTML = GAN.ventas.map((v,i)=>`
+    <tr>
+      <td><input type="date" value="${v.fecha}" style="width:120px;font-size:12px" onchange="GAN.ventas[${i}].fecha=this.value;ganRecalcular()"></td>
+      <td><input type="text" value="${v.desc}" style="font-size:12px" onchange="GAN.ventas[${i}].desc=this.value"></td>
+      <td><select style="font-size:12px;width:80px" onchange="GAN.ventas[${i}].tipo=this.value">
+        ${['FA','FB','NCA','NCB','NDA','NDB'].map(t=>`<option ${t===v.tipo?'selected':''}>${t}</option>`).join('')}
+      </select></td>
+      <td style="text-align:right"><input type="number" value="${v.neto}" style="width:110px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].neto=parseFloat(this.value)||0;GAN.ventas[${i}].total=GAN.ventas[${i}].neto+GAN.ventas[${i}].iva21+GAN.ventas[${i}].iva105;ganRenderVentas();ganRecalcular()"></td>
+      <td style="text-align:right"><input type="number" value="${v.iva21}" style="width:90px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].iva21=parseFloat(this.value)||0;GAN.ventas[${i}].total=GAN.ventas[${i}].neto+GAN.ventas[${i}].iva21+GAN.ventas[${i}].iva105;ganRenderVentas();ganRecalcular()"></td>
+      <td style="text-align:right"><input type="number" value="${v.iva105}" style="width:90px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].iva105=parseFloat(this.value)||0;GAN.ventas[${i}].total=GAN.ventas[${i}].neto+GAN.ventas[${i}].iva21+GAN.ventas[${i}].iva105;ganRenderVentas();ganRecalcular()"></td>
+      <td style="text-align:right;font-weight:500">${fmtPesos(v.total)}</td>
+      <td><button class="action-btn del" onclick="GAN.ventas.splice(${i},1);ganRenderVentas();ganRecalcular()" title="Eliminar">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+      </button></td>
+    </tr>`).join('');
+  ganActualizarTotVentas();
+}
+
+function ganActualizarTotVentas(){
+  const totN = GAN.ventas.reduce((s,v)=>s+v.neto,0);
+  const tot21 = GAN.ventas.reduce((s,v)=>s+v.iva21,0);
+  const tot105 = GAN.ventas.reduce((s,v)=>s+v.iva105,0);
+  const totT = GAN.ventas.reduce((s,v)=>s+v.total,0);
+  document.getElementById('gan-tot-neto-v').textContent = fmtPesos(totN);
+  document.getElementById('gan-tot-iva21-v').textContent = fmtPesos(tot21);
+  document.getElementById('gan-tot-iva105-v').textContent = fmtPesos(tot105);
+  document.getElementById('gan-tot-total-v').textContent = fmtPesos(totT);
+}
+
+function ganAgregarVenta(){
+  GAN.ventas.push({fecha:'',desc:'',tipo:'FA',neto:0,iva21:0,iva105:0,total:0});
+  ganRenderVentas();
+}
+
+// ── RENDER COMPRAS ───────────────────────────────────────────────
+function ganFiltrarCompras(f,el){
+  GAN.filtroCompras=f;
+  document.querySelectorAll('[id^=gan-fil-]').forEach(b=>{b.style.background='';b.style.color='';b.style.borderColor='';});
+  if(el){el.style.background='var(--accent)';el.style.color='white';el.style.borderColor='var(--accent)';}
+  ganRenderCompras();
+}
+
+function ganRenderCompras(){
+  const tbody=document.getElementById('gan-body-compras');
+  const empty=document.getElementById('gan-empty-compras');
+  const datos = GAN.filtroCompras==='todos' ? GAN.compras :
+    GAN.filtroCompras==='' ? GAN.compras.filter(c=>!c.clasif) :
+    GAN.compras.filter(c=>c.clasif===GAN.filtroCompras);
+  const idxMap = datos.map(d=>GAN.compras.indexOf(d));
+
+  if(!GAN.compras.length){ tbody.innerHTML=''; empty.style.display='block'; ganActualizarSubtotCompras(); return; }
+  empty.style.display='none';
+
+  const clsColor = {Costo:'var(--ok-light)',Deducible:'var(--blue-light)','No Deducible':'var(--danger-light)','':'var(--warn-light)'};
+  tbody.innerHTML = datos.map((c,j)=>{
+    const i=idxMap[j];
+    const bg = clsColor[c.clasif]||clsColor[''];
+    return `<tr>
+      <td><input type="date" value="${c.fecha}" style="width:120px;font-size:12px" onchange="GAN.compras[${i}].fecha=this.value"></td>
+      <td><input type="text" value="${c.desc}" style="font-size:12px" onchange="GAN.compras[${i}].desc=this.value"></td>
+      <td><select style="font-size:12px;width:80px" onchange="GAN.compras[${i}].tipo=this.value">
+        ${['FA','FB','NCA','NCB','Ticket','Otro'].map(t=>`<option ${t===c.tipo?'selected':''}>${t}</option>`).join('')}
+      </select></td>
+      <td style="text-align:right"><input type="number" value="${c.neto}" style="width:100px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].neto=parseFloat(this.value)||0;GAN.compras[${i}].total=GAN.compras[${i}].neto+GAN.compras[${i}].iva;ganRenderCompras();ganRecalcular()"></td>
+      <td style="text-align:right"><input type="number" value="${c.iva}" style="width:90px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].iva=parseFloat(this.value)||0;GAN.compras[${i}].total=GAN.compras[${i}].neto+GAN.compras[${i}].iva;ganRenderCompras();ganRecalcular()"></td>
+      <td style="text-align:right;font-weight:500">${fmtPesos(c.total)}</td>
+      <td style="background:${bg}">
+        <select style="font-size:12px;font-weight:600;background:${bg};border:none;width:100%" onchange="GAN.compras[${i}].clasif=this.value;ganRenderCompras();ganActualizarSubtotCompras();ganRecalcular()">
+          <option value="" ${!c.clasif?'selected':''}>— Clasificar —</option>
+          <option value="Costo" ${c.clasif==='Costo'?'selected':''}>Costo (art.58-65)</option>
+          <option value="Deducible" ${c.clasif==='Deducible'?'selected':''}>Deducible (art.85-91)</option>
+          <option value="No Deducible" ${c.clasif==='No Deducible'?'selected':''}>No Deducible (art.92)</option>
+        </select>
+      </td>
+      <td><input type="text" value="${c.obs||''}" style="font-size:11px;width:100px" placeholder="Obs..." onchange="GAN.compras[${i}].obs=this.value"></td>
+      <td><button class="action-btn del" onclick="GAN.compras.splice(${i},1);ganRenderCompras();ganRecalcular()" title="Eliminar">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+  ganActualizarSubtotCompras();
+  ganActualizarTotCompras();
+}
+
+function ganActualizarSubtotCompras(){
+  const sum = cls => GAN.compras.filter(c=>c.clasif===cls).reduce((s,c)=>s+c.neto,0);
+  document.getElementById('gan-sub-costo').textContent = fmtPesos(sum('Costo'));
+  document.getElementById('gan-sub-deducible').textContent = fmtPesos(sum('Deducible'));
+  document.getElementById('gan-sub-noded').textContent = fmtPesos(sum('No Deducible'));
+}
+
+function ganActualizarTotCompras(){
+  const totN=GAN.compras.reduce((s,c)=>s+c.neto,0);
+  const totI=GAN.compras.reduce((s,c)=>s+c.iva,0);
+  const totT=GAN.compras.reduce((s,c)=>s+c.total,0);
+  document.getElementById('gan-tot-neto-c').textContent=fmtPesos(totN);
+  document.getElementById('gan-tot-iva-c').textContent=fmtPesos(totI);
+  document.getElementById('gan-tot-total-c').textContent=fmtPesos(totT);
+}
+
+function ganAgregarCompra(){
+  GAN.compras.push({fecha:'',desc:'',tipo:'FA',neto:0,iva:0,total:0,clasif:'',obs:''});
+  GAN.filtroCompras='todos';
+  ganRenderCompras();
+}
+
+// ── RENDER DEDUCCIONES ───────────────────────────────────────────
+function ganRenderDeducciones(){
+  const tbody=document.getElementById('gan-body-deducciones');
+  tbody.innerHTML = GAN.deducciones.map((d,i)=>`
+    <tr style="${d.aplica?'background:var(--ok-light)':''}">
+      <td style="text-align:center">
+        <input type="checkbox" ${d.aplica?'checked':''} onchange="GAN.deducciones[${i}].aplica=this.checked;ganRenderDeducciones();ganRecalcular()" style="width:auto;cursor:pointer;width:16px;height:16px">
+      </td>
+      <td style="font-weight:${d.aplica?'500':'400'}">${d.concepto}</td>
+      <td style="text-align:right">
+        <input type="number" value="${d.monto}" style="width:150px;text-align:right;font-size:13px;${d.aplica?'font-weight:600':'opacity:.6'}"
+          onchange="GAN.deducciones[${i}].monto=parseFloat(this.value)||0;ganRecalcular();ganActualizarTotalDed()">
+      </td>
+      <td><span class="badge badge-afip" style="font-size:10px">${d.base}</span></td>
+    </tr>`).join('');
+  ganActualizarTotalDed();
+}
+
+function ganActualizarTotalDed(){
+  const total = GAN.deducciones.filter(d=>d.aplica).reduce((s,d)=>s+d.monto,0);
+  const el = document.getElementById('ded-total-display');
+  if(el) el.textContent = fmtPesos(total);
+  return total;
+}
+
+// ── RECALCULAR ───────────────────────────────────────────────────
+function ganRecalcular(){
+  // I. Ingresos
+  const ventasNetas = GAN.ventas.reduce((s,v)=>s+v.neto,0);
+  const devoluciones = parseFloat(document.getElementById('gr-devoluciones')?.value||0)||0;
+  const ingNetos = ventasNetas - devoluciones;
+
+  // II. Costos
+  const existIni = parseFloat(document.getElementById('gr-exist-ini')?.value||0)||0;
+  const costosPer = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+c.neto,0);
+  const existFin = parseFloat(document.getElementById('gr-exist-fin')?.value||0)||0;
+  const costoVentas = existIni + costosPer - existFin;
+
+  // Resultado Bruto
+  const resBruto = ingNetos - costoVentas;
+
+  // III. Gastos Deducibles
+  const gastosLIB = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+c.neto,0);
+  const amort = parseFloat(document.getElementById('gr-amortizaciones')?.value||0)||0;
+  const prev = parseFloat(document.getElementById('gr-previsiones')?.value||0)||0;
+  const otrosDed = parseFloat(document.getElementById('gr-otros-ded')?.value||0)||0;
+  const totalDed = gastosLIB + amort + prev + otrosDed;
+
+  // IV. Ajustes
+  const ajInflacion = parseFloat(document.getElementById('gr-aj-inflacion')?.value||0)||0;
+  const ajCambio = parseFloat(document.getElementById('gr-aj-cambio')?.value||0)||0;
+  const rentaFin = parseFloat(document.getElementById('gr-renta-fin')?.value||0)||0;
+  const quebrantos = parseFloat(document.getElementById('gr-quebrantos')?.value||0)||0;
+  const otrosAj = parseFloat(document.getElementById('gr-otros-aj')?.value||0)||0;
+  const totalAj = ajInflacion + ajCambio + rentaFin - quebrantos + otrosAj;
+
+  // Resultado Impositivo
+  const resImpositivo = resBruto - totalDed + totalAj;
+
+  // Deducciones personales
+  const deducPers = GAN.deducciones.filter(d=>d.aplica).reduce((s,d)=>s+d.monto,0);
+
+  // Base imponible neta
+  const baseImponible = resImpositivo - deducPers;
+
+  // ── Actualizar DOM resultado ──────────────────────────────────
+  const set = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(val); };
+
+  set('gr-ventas-netas', ventasNetas);
+  set('gr-ing-netos', ingNetos);
+  set('gr-costos-per', costosPer);
+  set('gr-costo-ventas', costoVentas);
+  set('gr-resultado-bruto', resBruto);
+  set('gr-gastos-ded', gastosLIB);
+  set('gr-total-ded', totalDed);
+
+  const finEl = document.getElementById('gr-resultado-final');
+  const tipoEl = document.getElementById('gr-resultado-tipo');
+  if(finEl){
+    finEl.textContent = fmtPesos(resImpositivo);
+    finEl.style.color = resImpositivo >= 0 ? 'var(--ok)' : 'var(--danger)';
+  }
+  if(tipoEl) tipoEl.textContent = resImpositivo >= 0 ? '✅ GANANCIA — corresponde tributar' : '🔴 QUEBRANTO — art. 19 LIG';
+
+  // Cuadro resumen
+  const s = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(val); };
+  s('res-ing',ingNetos); s('res-costo',costoVentas); s('res-bruto',resBruto);
+  s('res-ded',totalDed); s('res-aj',totalAj); s('res-imp',resImpositivo);
+  s('res-pers',deducPers); s('res-base',baseImponible);
+
+  // Panel deducciones
+  const dd = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(val); };
+  dd('ded-res-imp',resImpositivo); dd('ded-res-ded',deducPers); dd('ded-res-base',baseImponible);
+  ganActualizarTotalDed();
+}
+
+// ── DESCARGAR EXCEL ──────────────────────────────────────────────
+function ganDescargarExcel(){
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // ── Hoja 1: IVA Ventas ──
+    const hv = [['Fecha','Descripción / Cliente','Tipo Cbte.','Neto Gravado ($)','IVA 21% ($)','IVA 10,5% ($)','Total ($)']];
+    GAN.ventas.forEach(v=>hv.push([v.fecha,v.desc,v.tipo,v.neto,v.iva21,v.iva105,v.total]));
+    hv.push(['','','','=SUM(D2:D'+hv.length+')','=SUM(E2:E'+hv.length+')','=SUM(F2:F'+hv.length+')','=SUM(G2:G'+hv.length+')']);
+    const wsV = XLSX.utils.aoa_to_sheet(hv);
+    wsV['!cols'] = [{wch:14},{wch:36},{wch:12},{wch:18},{wch:16},{wch:16},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, wsV, 'IVA Ventas');
+
+    // ── Hoja 2: IVA Compras ──
+    const hc = [['Fecha','Descripción / Proveedor','Tipo Cbte.','Neto ($)','IVA CF ($)','Total ($)','Clasificación','Observaciones']];
+    GAN.compras.forEach(c=>hc.push([c.fecha,c.desc,c.tipo,c.neto,c.iva,c.total,c.clasif||'— Sin clasificar —',c.obs]));
+    const totRow = hc.length;
+    hc.push(['TOTALES','','','=SUM(D2:D'+totRow+')','=SUM(E2:E'+totRow+')','=SUM(F2:F'+totRow+')','','']);
+    hc.push(['COSTOS','','','=SUMIF(G2:G'+totRow+',"Costo",D2:D'+totRow+')','','','art. 58-65 LIG','']);
+    hc.push(['DEDUCIBLES','','','=SUMIF(G2:G'+totRow+',"Deducible",D2:D'+totRow+')','','','art. 85-91 LIG','']);
+    hc.push(['NO DEDUCIBLES','','','=SUMIF(G2:G'+totRow+',"No Deducible",D2:D'+totRow+')','','','art. 92 LIG','']);
+    const wsC = XLSX.utils.aoa_to_sheet(hc);
+    wsC['!cols'] = [{wch:14},{wch:36},{wch:12},{wch:16},{wch:14},{wch:16},{wch:24},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, wsC, 'IVA Compras y Gastos');
+
+    // ── Hoja 3: Resultado Impositivo ──
+    const dv = parseFloat(document.getElementById('gr-devoluciones')?.value)||0;
+    const eI = parseFloat(document.getElementById('gr-exist-ini')?.value)||0;
+    const eF = parseFloat(document.getElementById('gr-exist-fin')?.value)||0;
+    const am = parseFloat(document.getElementById('gr-amortizaciones')?.value)||0;
+    const pr = parseFloat(document.getElementById('gr-previsiones')?.value)||0;
+    const od = parseFloat(document.getElementById('gr-otros-ded')?.value)||0;
+    const ajI = parseFloat(document.getElementById('gr-aj-inflacion')?.value)||0;
+    const ajC = parseFloat(document.getElementById('gr-aj-cambio')?.value)||0;
+    const rf = parseFloat(document.getElementById('gr-renta-fin')?.value)||0;
+    const qb = parseFloat(document.getElementById('gr-quebrantos')?.value)||0;
+    const oa = parseFloat(document.getElementById('gr-otros-aj')?.value)||0;
+    const ventasNetas = GAN.ventas.reduce((s,v)=>s+v.neto,0);
+    const costosPer = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+c.neto,0);
+    const gastosLIB = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+c.neto,0);
+    const deducPers = GAN.deducciones.filter(d=>d.aplica).reduce((s,d)=>s+d.monto,0);
+
+    const hr = [
+      ['DETERMINACIÓN DEL RESULTADO IMPOSITIVO — IMPUESTO A LAS GANANCIAS','',''],
+      ['Ley 20.628 y modificatorias | Período Fiscal 2025','',''],
+      ['','',''],
+      ['I. INGRESOS GRAVADOS (art. 2° y 53° LIG)','Importe ($)','Referencia legal'],
+      ['Ventas netas gravadas (sin IVA)',ventasNetas,'art. 2 LIG'],
+      ['(-) Devoluciones y descuentos',dv,'editable'],
+      ['= INGRESOS NETOS DEL PERÍODO','=B5-B6','art. 2 LIG'],
+      ['','',''],
+      ['II. COSTO DE VENTAS (art. 58° a 65° LIG)','',''],
+      ['(+) Existencia inicial bienes de cambio',eI,'Inventario inicio'],
+      ['(+) Compras/Costos del período',costosPer,'Desde IVA Compras'],
+      ['(-) Existencia final bienes de cambio',eF,'Inventario cierre'],
+      ['= COSTO DE VENTAS','=B10+B11-B12','art. 58-62 LIG'],
+      ['','',''],
+      ['▶ RESULTADO BRUTO','=B7-B13','art. 53 LIG'],
+      ['','',''],
+      ['III. GASTOS DEDUCIBLES (art. 85° a 91° LIG)','',''],
+      ['Gastos deducibles del período',gastosLIB,'Desde IVA Compras'],
+      ['Amortizaciones bienes de uso',am,'art. 87 LIG'],
+      ['Previsiones malos créditos',pr,'art. 87 inc. b LIG'],
+      ['Otros gastos deducibles',od,'art. 91 LIG'],
+      ['= TOTAL GASTOS DEDUCIBLES','=SUM(B18:B21)','art. 85-91 LIG'],
+      ['','',''],
+      ['IV. AJUSTES IMPOSITIVOS','',''],
+      ['Ajuste por inflación impositivo',ajI,'art. 95 / Tít. VI LIG'],
+      ['Diferencias de cambio',ajC,'art. 72 LIG'],
+      ['Renta financiera gravada',rf,'art. 95 LIG'],
+      ['(-) Quebrantos anteriores',-qb,'art. 19 LIG'],
+      ['Otros ajustes',oa,'editable'],
+      ['','',''],
+      ['▶ RESULTADO IMPOSITIVO FINAL','=B15-B22+B25+B26+B27+B28+B29',''],
+      ['(-) Deducciones personales',deducPers,'art. 30 LIG'],
+      ['▶ BASE IMPONIBLE NETA','=B31-B32',''],
+    ];
+    const wsR = XLSX.utils.aoa_to_sheet(hr);
+    wsR['!cols'] = [{wch:52},{wch:22},{wch:26}];
+    XLSX.utils.book_append_sheet(wb, wsR, 'Resultado Impositivo');
+
+    // ── Hoja 4: Deducciones Personales ──
+    const hd = [['Aplica','Concepto','Monto Anual ($)','Base Legal']];
+    GAN.deducciones.forEach(d=>hd.push([d.aplica?'SÍ':'NO',d.concepto,d.monto,d.base]));
+    const totD = hd.length;
+    hd.push(['TOTAL APLICABLES','','=SUMIF(A2:A'+totD+',"SÍ",C2:C'+totD+')','Solo marcadas SÍ']);
+    const wsD = XLSX.utils.aoa_to_sheet(hd);
+    wsD['!cols'] = [{wch:10},{wch:58},{wch:20},{wch:24}];
+    XLSX.utils.book_append_sheet(wb, wsD, 'Deducciones Personales');
+
+    // ── Hoja 5: Resumen Ejecutivo ──
+    const ingNetosVal = ventasNetas - dv;
+    const costoVentasVal = eI + costosPer - eF;
+    const resBrutoVal = ingNetosVal - costoVentasVal;
+    const totalDedVal = gastosLIB + am + pr + od;
+    const totalAjVal = ajI + ajC + rf - qb + oa;
+    const resImpVal = resBrutoVal - totalDedVal + totalAjVal;
+    const baseVal = resImpVal - deducPers;
+
+    const hs = [
+      ['RESUMEN EJECUTIVO — DDJJ IMPUESTO A LAS GANANCIAS',''],
+      ['Ley 20.628 | Período Fiscal 2025 | Base: Devengado',''],
+      ['',''],
+      ['Concepto','Importe ($)'],
+      ['I. Ingresos Netos del Período',ingNetosVal],
+      ['II. (-) Costo de Ventas',costoVentasVal],
+      ['= RESULTADO BRUTO',resBrutoVal],
+      ['III. (-) Gastos Deducibles',totalDedVal],
+      ['IV. (±) Ajustes Impositivos',totalAjVal],
+      ['= RESULTADO IMPOSITIVO',resImpVal],
+      ['(-) Deducciones Personales (art. 30 LIG)',deducPers],
+      ['= BASE IMPONIBLE NETA DEL IMPUESTO',baseVal],
+      ['',''],
+      [resImpVal>=0?'Estado: GANANCIA — corresponde tributar':'Estado: QUEBRANTO — art. 19 LIG',''],
+      ['',''],
+      ['Notas legales:',''],
+      ['• Normativa: LIG 20.628 y sus modificaciones (Ley 27.430, 27.617, 27.743)',''],
+      ['• Ajuste por inflación: Título VI LIG — art. 95 y ss.',''],
+      ['• Deducciones personales: art. 30 LIG (montos actualizados por AFIP)',''],
+      ['• Verificar con Contador/a matriculado/a antes de presentar la DDJJ',''],
+      ['• Presentación: Aplicativo AFIP — Ganancias Personas Humanas / SIRADIG',''],
+    ];
+    const wsS = XLSX.utils.aoa_to_sheet(hs);
+    wsS['!cols'] = [{wch:56},{wch:22}];
+    XLSX.utils.book_append_sheet(wb, wsS, 'Resumen Ejecutivo');
+
+    const anio = new Date().getFullYear();
+    XLSX.writeFile(wb, `DDJJ_Ganancias_${anio}.xlsx`);
+    toast('✅ Excel descargado con 5 hojas listo para usar','ok');
+  } catch(err){
+    toast('❌ Error al generar Excel: '+err.message,'danger');
+  }
+}
+
+// ── INTEGRACIÓN CON nav() ────────────────────────────────────────
+// Parchear la función nav existente para inicializar el módulo
+const _navOrig = typeof nav === 'function' ? nav : null;
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Re-definir nav para interceptar 'ganancias'
+  const _origNav = window.nav;
+  window.nav = function(section, el){
+    _origNav(section, el);
+    if(section==='ganancias'){
+      // Actualizar topbar
+      const pt=document.getElementById('page-title');
+      const ps=document.getElementById('page-sub');
+      if(pt) pt.textContent='DDJJ Ganancias';
+      if(ps) ps.textContent='Determinación del resultado impositivo — LIG 20.628';
+      // Actualizar topbar actions
+      const ta=document.getElementById('topbar-actions');
+      if(ta) ta.innerHTML=`
+        <button class="btn btn-sm" onclick="ganReiniciar()" style="border-color:var(--danger);color:var(--danger);gap:6px;display:flex;align-items:center">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reiniciar DDJJ
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="ganDescargarExcel()">⬇ Descargar Excel</button>`;
+      ganInit();
+    }
+  };
+});
 </script>
 </body>
 </html>

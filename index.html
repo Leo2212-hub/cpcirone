@@ -767,6 +767,7 @@ textarea{height:80px;resize:vertical}
           <button class="tab" id="gan-tab-btn-compras" onclick="ganTab('compras',this)">📥 IVA Compras</button>
           <button class="tab" id="gan-tab-btn-resultado" onclick="ganTab('resultado',this)">📊 Resultado Impositivo</button>
           <button class="tab" id="gan-tab-btn-deducciones" onclick="ganTab('deducciones',this)">👤 Deducciones Personales</button>
+          <button class="tab" id="gan-tab-btn-patrimonio" onclick="ganTab('patrimonio',this)">🏦 Variación Patrimonial</button>
         </div>
 
         <!-- TAB: IVA VENTAS -->
@@ -992,6 +993,91 @@ textarea{height:80px;resize:vertical}
                   <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-otros-aj" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
                 </div>
               </div>
+
+              <!-- V. Ingresos no alcanzados -->
+              <div class="card" style="margin-bottom:1rem;border-left:3px solid var(--blue)">
+                <div class="card-header" style="margin-bottom:.75rem">
+                  <div class="card-title">V — Ingresos no alcanzados por Ganancias <span style="font-size:12px;font-weight:400;color:var(--text3)">(informativo)</span></div>
+                </div>
+                <div class="alert" style="background:var(--blue-light);color:var(--blue);border:1px solid var(--blue);margin-bottom:1rem;font-size:12px;opacity:.9">
+                  ℹ️ Estos ingresos <strong>no forman parte de la base imponible</strong> de Ganancias pero son necesarios para la justificación patrimonial (art. 47 LIG) y para completar el F.711 / SIRADIG correctamente.
+                </div>
+
+                <!-- Monotributo -->
+                <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+                  <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;display:flex;align-items:center;gap:6px">
+                    <span style="background:var(--blue-light);color:var(--blue);border-radius:4px;padding:1px 6px;font-size:11px">Monotributo</span>
+                    Ingresos del régimen simplificado
+                  </div>
+                  <div class="venc-row">
+                    <span>Ingresos brutos como monotributista ($)</span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-mono-ingresos" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                  <div class="venc-row">
+                    <span>Cuotas monotributo abonadas ($) <span style="font-size:11px;color:var(--text3)">(componente impositivo)</span></span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-mono-cuotas" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                </div>
+
+                <!-- Relación de dependencia -->
+                <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+                  <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;display:flex;align-items:center;gap:6px">
+                    <span style="background:var(--ok-light);color:var(--ok);border-radius:4px;padding:1px 6px;font-size:11px">Rel. dependencia</span>
+                    Datos del empleador — SIRADIG
+                  </div>
+                  <div class="venc-row">
+                    <span>Remuneración bruta anual ($)</span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-dep-bruto" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                  <div class="venc-row">
+                    <span>Retenciones practicadas por empleador ($) <span style="font-size:11px;color:var(--text3)">(F.649)</span></span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-dep-retenciones" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                  <div class="venc-row">
+                    <span>Aportes jubilatorios / obra social ($)</span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-dep-aportes" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                </div>
+
+                <!-- Alquileres -->
+                <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+                  <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;display:flex;align-items:center;gap:6px">
+                    <span style="background:var(--warn-light);color:var(--warn);border-radius:4px;padding:1px 6px;font-size:11px">Alquileres</span>
+                    Renta de inmuebles
+                  </div>
+                  <div class="venc-row">
+                    <span>Ingresos por alquileres — bruto anual ($)</span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-alq-bruto" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                  <div class="venc-row">
+                    <span>Retenciones / anticipos abonados ($)</span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-alq-retenciones" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                </div>
+
+                <!-- Otros no alcanzados -->
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.5rem;display:flex;align-items:center;gap:6px">
+                    <span style="background:var(--surface2);color:var(--text2);border-radius:4px;padding:1px 6px;font-size:11px">Otros</span>
+                    Otros ingresos no alcanzados
+                  </div>
+                  <div class="venc-row">
+                    <span>Descripción</span>
+                    <input type="text" id="gr-otros-desc" placeholder="Ej: subsidio, herencia, donación..." style="width:200px;font-size:12px" oninput="ganRecalcular()">
+                  </div>
+                  <div class="venc-row">
+                    <span>Importe ($)</span>
+                    <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-otros-noalc" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                </div>
+
+                <!-- Total no alcanzados -->
+                <div class="venc-row" style="background:var(--blue-light);border-radius:var(--radius);padding:10px;margin-top:.75rem;border:none">
+                  <strong style="color:var(--blue)">= Total ingresos no alcanzados</strong>
+                  <strong style="font-size:16px;color:var(--blue)" id="gr-total-noalc">$0,00</strong>
+                </div>
+              </div>
+
             </div>
 
             <!-- Columna derecha: resumen ejecutivo -->
@@ -1016,6 +1102,19 @@ textarea{height:80px;resize:vertical}
                   <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(−) Deduc. personales</span><span id="res-pers">$0</span></div>
                   <div style="display:flex;justify-content:space-between;font-weight:700;border-top:2px solid var(--ok);padding-top:6px;color:var(--ok)"><span>= BASE IMPONIBLE NETA</span><span id="res-base">$0</span></div>
                 </div>
+                <!-- Resumen no alcanzados -->
+                <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+                  <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Ingresos no alcanzados</div>
+                  <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Monotributo</span><span id="res-mono">$0</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Rel. dependencia (bruto)</span><span id="res-dep">$0</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Alquileres</span><span id="res-alq">$0</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Otros</span><span id="res-otros-na">$0</span></div>
+                    <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid var(--blue);padding-top:5px;color:var(--blue)"><span>Total no alcanzados</span><span id="res-noalc-total">$0</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Retenciones empleador</span><span id="res-ret-dep">$0</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Retenciones alquileres</span><span id="res-ret-alq">$0</span></div>
+                  </div>
+                </div>
               </div>
 
               <!-- Botón descargar Excel -->
@@ -1023,7 +1122,7 @@ textarea{height:80px;resize:vertical}
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Descargar Excel DDJJ
               </button>
-              <div style="font-size:11px;color:var(--text3);margin-top:6px;text-align:center">5 hojas: IVA Ventas · IVA Compras · Resultado · Deducciones · Resumen</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:6px;text-align:center">6 hojas: IVA Ventas · IVA Compras · Resultado · Deducciones · Resumen · Patrimonio</div>
             </div>
           </div>
         </div>
@@ -1070,6 +1169,115 @@ textarea{height:80px;resize:vertical}
                   <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(−) Deduc. personales</span><span id="ded-res-ded">$0</span></div>
                   <div style="display:flex;justify-content:space-between;font-weight:700;border-top:2px solid var(--ok);padding-top:6px;color:var(--ok)"><span>= BASE IMPONIBLE</span><span id="ded-res-base">$0</span></div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: VARIACIÓN PATRIMONIAL -->
+        <div id="gan-panel-patrimonio" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:1rem;align-items:start">
+
+            <!-- Tabla principal -->
+            <div>
+              <div class="card" style="margin-bottom:1rem">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">Variación Patrimonial <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 47° LIG)</span></div>
+                    <div class="card-subtitle">Patrimonio al inicio y cierre del ejercicio fiscal. La diferencia positiva es consumo; la negativa es ahorro.</div>
+                  </div>
+                  <button class="btn btn-sm btn-primary" onclick="patAgregarRubro()">+ Agregar rubro</button>
+                </div>
+
+                <div class="alert alert-afip" style="margin-bottom:1rem;font-size:12px">
+                  💡 <strong>Art. 47 LIG:</strong> La variación patrimonial se obtiene como: <strong>Patrimonio Cierre − Patrimonio Inicio + Consumos</strong>. Si el resultado es positivo, existe un incremento patrimonial que debe justificarse con la ganancia declarada. Valores en pesos al cierre/inicio de cada ejercicio.
+                </div>
+
+                <!-- Tabla -->
+                <div class="table-wrap">
+                  <table id="pat-tabla">
+                    <thead>
+                      <tr>
+                        <th style="min-width:220px">Rubro / Bien</th>
+                        <th style="text-align:right;min-width:150px">Valor Inicio ($)</th>
+                        <th style="text-align:right;min-width:150px">Valor Cierre ($)</th>
+                        <th style="text-align:right;min-width:130px">Variación ($)</th>
+                        <th style="width:120px">Tipo</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="pat-body"></tbody>
+                    <tfoot>
+                      <tr style="background:var(--surface2)">
+                        <td style="font-weight:600;font-size:12px;padding:10px">TOTALES</td>
+                        <td style="text-align:right;font-weight:700" id="pat-tot-ini"></td>
+                        <td style="text-align:right;font-weight:700" id="pat-tot-cie"></td>
+                        <td style="text-align:right;font-weight:700" id="pat-tot-var"></td>
+                        <td colspan="2"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Consumos -->
+              <div class="card">
+                <div class="card-header" style="margin-bottom:.75rem">
+                  <div class="card-title">Consumos del período <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 47° inc. d LIG)</span></div>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;line-height:1.5">
+                  Son los gastos personales y familiares no computados como gasto de la actividad: alimentos, vestimenta, educación, turismo, etc.
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <div>
+                    <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Gastos personales estimados ($)</label>
+                    <input type="number" id="pat-consumo-personal" value="0" style="font-size:14px" oninput="patRecalcular()" placeholder="0">
+                  </div>
+                  <div>
+                    <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Otros consumos / gastos de sustento ($)</label>
+                    <input type="number" id="pat-consumo-otros" value="0" style="font-size:14px" oninput="patRecalcular()" placeholder="0">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel derecho: resumen -->
+            <div style="position:sticky;top:1rem">
+
+              <!-- Resultado patrimonial -->
+              <div class="card" style="margin-bottom:1rem;border:2px solid var(--accent);background:var(--accent-light)">
+                <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Variación Patrimonial Neta</div>
+                <div style="font-family:var(--serif);font-size:28px;color:var(--accent);margin-bottom:4px" id="pat-variacion-display">$0,00</div>
+                <div style="font-size:11px;color:var(--accent);opacity:.8" id="pat-variacion-tipo">Cierre − Inicio</div>
+              </div>
+
+              <!-- Cuadro art. 47 -->
+              <div class="card" style="margin-bottom:1rem">
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em">Justificación art. 47 LIG</div>
+                <div style="font-size:13px;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Patrimonio inicio</span><span id="pat-r-ini">$0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Patrimonio cierre</span><span id="pat-r-cie">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:6px;font-weight:600"><span>= Variación patrimonial</span><span id="pat-r-var">$0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(+) Consumos del período</span><span id="pat-r-cons">$0</span></div>
+                  <div style="display:flex;justify-content:space-between;font-weight:700;border-top:2px solid var(--accent);padding-top:6px;color:var(--accent)"><span>= Renta consumida + Ahorro</span><span id="pat-r-total">$0</span></div>
+                </div>
+                <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--border)">
+                  <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Contraste con ganancia declarada</div>
+                  <div style="font-size:13px;display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Base imponible (DDJJ)</span><span id="pat-r-base">$0</span></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">(−) Renta consumida + Ahorro</span><span id="pat-r-rca">$0</span></div>
+                    <div style="display:flex;justify-content:space-between;font-weight:700;border-top:2px solid var(--border);padding-top:6px" id="pat-r-diferencia-row">
+                      <span>Diferencia</span><span id="pat-r-dif">$0</span>
+                    </div>
+                  </div>
+                  <div id="pat-semaforo" style="margin-top:.75rem;font-size:12px;border-radius:var(--radius);padding:8px 10px;text-align:center;font-weight:600"></div>
+                </div>
+              </div>
+
+              <!-- Subtotales por tipo -->
+              <div class="card">
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em">Por tipo de bien</div>
+                <div id="pat-por-tipo" style="font-size:12px;display:flex;flex-direction:column;gap:4px"></div>
               </div>
             </div>
           </div>
@@ -4132,7 +4340,8 @@ const GAN = {
   compras: [],
   filtroCompras: 'todos',
   deducciones: [],
-  sortV: null,   // null | 'asc' | 'desc'
+  patrimonio: [],
+  sortV: null,
   sortC: null,
 };
 
@@ -4158,7 +4367,6 @@ const DEDUCCIONES_LIG = [
 ];
 
 function ganReiniciar(){
-  // Modal de confirmación inline
   const existe = document.getElementById('gan-modal-reiniciar');
   if(existe) existe.remove();
 
@@ -4181,56 +4389,220 @@ function ganReiniciar(){
       </div>
     </div>`;
   document.body.appendChild(modal);
-  // Cerrar al hacer clic fuera
   modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
 }
 
 function ganConfirmarReiniciar(){
-  // Limpiar datos
   GAN.ventas = [];
   GAN.compras = [];
   GAN.sortV = null;
   GAN.sortC = null;
   GAN.filtroCompras = 'todos';
   GAN.deducciones = DEDUCCIONES_LIG.map(d=>({...d}));
+  GAN.patrimonio = PAT_RUBROS_DEFAULT.map(r=>({...r}));
 
-  // Resetear inputs editables del resultado
   ['gr-devoluciones','gr-exist-ini','gr-exist-fin','gr-amortizaciones',
    'gr-previsiones','gr-otros-ded','gr-aj-inflacion','gr-aj-cambio',
-   'gr-renta-fin','gr-quebrantos','gr-otros-aj'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.value = 0;
+   'gr-renta-fin','gr-quebrantos','gr-otros-aj',
+   'gr-mono-ingresos','gr-mono-cuotas','gr-dep-bruto','gr-dep-retenciones',
+   'gr-dep-aportes','gr-alq-bruto','gr-alq-retenciones','gr-otros-noalc',
+   'pat-consumo-personal','pat-consumo-otros'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value = 0;
   });
 
-  // Resetear icono de orden
-  const iv = document.getElementById('gan-sort-icon-v');
-  const ic = document.getElementById('gan-sort-icon-c');
-  if(iv) iv.textContent = '↕';
-  if(ic) ic.textContent = '↕';
+  const iv = document.getElementById('gan-sort-icon-v'); if(iv) iv.textContent='↕';
+  const ic = document.getElementById('gan-sort-icon-c'); if(ic) ic.textContent='↕';
 
-  // Resetear filtro compras a "todos"
-  document.querySelectorAll('[id^=gan-fil-]').forEach(b=>{
-    b.style.background=''; b.style.color=''; b.style.borderColor='';
-  });
+  document.querySelectorAll('[id^=gan-fil-]').forEach(b=>{b.style.background='';b.style.color='';b.style.borderColor='';});
   const btnTodos = document.getElementById('gan-fil-todos');
-  if(btnTodos){ btnTodos.style.background='var(--accent)'; btnTodos.style.color='white'; btnTodos.style.borderColor='var(--accent)'; }
+  if(btnTodos){btnTodos.style.background='var(--accent)';btnTodos.style.color='white';btnTodos.style.borderColor='var(--accent)';}
 
-  // Volver al primer tab
   ganTab('ventas', document.getElementById('gan-tab-btn-ventas'));
-
-  // Re-renderizar todo
   ganRenderVentas();
   ganRenderCompras();
   ganRenderDeducciones();
   ganRecalcular();
 
   document.getElementById('gan-modal-reiniciar').remove();
-  toast('🔄 DDJJ reiniciada — todos los datos fueron eliminados', 'ok');
+  toast('🔄 DDJJ reiniciada — todos los datos fueron eliminados','ok');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MÓDULO VARIACIÓN PATRIMONIAL — art. 47 LIG
+// ═══════════════════════════════════════════════════════════════════
+
+const PAT_RUBROS_DEFAULT = [
+  { rubro:'Inmuebles',              inicio:0, cierre:0, tipo:'Inmueble' },
+  { rubro:'Rodados / Vehículos',    inicio:0, cierre:0, tipo:'Rodado' },
+  { rubro:'Inversiones financieras',inicio:0, cierre:0, tipo:'Inversión' },
+  { rubro:'Plazo fijo / FCI',       inicio:0, cierre:0, tipo:'Inversión' },
+  { rubro:'Dinero en efectivo',     inicio:0, cierre:0, tipo:'Disponibilidad' },
+  { rubro:'Cuentas bancarias',      inicio:0, cierre:0, tipo:'Disponibilidad' },
+  { rubro:'Créditos / Préstamos otorgados', inicio:0, cierre:0, tipo:'Crédito' },
+  { rubro:'Bienes del hogar',       inicio:0, cierre:0, tipo:'Bien mueble' },
+  { rubro:'Deudas (restar)',        inicio:0, cierre:0, tipo:'Deuda' },
+  { rubro:'Otros bienes',           inicio:0, cierre:0, tipo:'Otro' },
+];
+
+// Se inicializa en GAN
+if(!GAN.patrimonio) GAN.patrimonio = PAT_RUBROS_DEFAULT.map(r=>({...r}));
+
+const PAT_TIPO_COLOR = {
+  'Inmueble':      'var(--blue-light)',
+  'Rodado':        'var(--ok-light)',
+  'Inversión':     'var(--accent-light)',
+  'Disponibilidad':'var(--warn-light)',
+  'Crédito':       'var(--surface2)',
+  'Bien mueble':   'var(--surface2)',
+  'Deuda':         'var(--danger-light)',
+  'Otro':          'var(--surface2)',
+};
+
+function patRenderTabla(){
+  const tbody = document.getElementById('pat-body');
+  if(!tbody) return;
+
+  tbody.innerHTML = GAN.patrimonio.map((r,i) => {
+    const variacion = r.cierre - r.inicio;
+    const esDeuda = r.tipo === 'Deuda';
+    const varColor = esDeuda
+      ? (variacion > 0 ? 'var(--danger)' : variacion < 0 ? 'var(--ok)' : 'var(--text2)')
+      : (variacion > 0 ? 'var(--ok)' : variacion < 0 ? 'var(--danger)' : 'var(--text2)');
+    const bgTipo = PAT_TIPO_COLOR[r.tipo] || 'var(--surface2)';
+
+    return `<tr>
+      <td><input type="text" value="${r.rubro}" style="font-size:13px;font-weight:500" onchange="GAN.patrimonio[${i}].rubro=this.value"></td>
+      <td style="text-align:right">
+        <input type="number" value="${r.inicio}" style="width:130px;text-align:right;font-size:13px" oninput="GAN.patrimonio[${i}].inicio=parseFloat(this.value)||0;patRecalcular()">
+      </td>
+      <td style="text-align:right">
+        <input type="number" value="${r.cierre}" style="width:130px;text-align:right;font-size:13px" oninput="GAN.patrimonio[${i}].cierre=parseFloat(this.value)||0;patRecalcular()">
+      </td>
+      <td style="text-align:right;font-weight:700;color:${varColor}">${fmtPesos(variacion)}</td>
+      <td style="background:${bgTipo}">
+        <select style="font-size:12px;background:${bgTipo};border:none;width:100%" onchange="GAN.patrimonio[${i}].tipo=this.value;patRenderTabla();patRecalcular()">
+          ${['Inmueble','Rodado','Inversión','Disponibilidad','Crédito','Bien mueble','Deuda','Otro'].map(t=>`<option ${t===r.tipo?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <button class="action-btn del" onclick="GAN.patrimonio.splice(${i},1);patRenderTabla();patRecalcular()" title="Eliminar">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  patRecalcular();
+}
+
+function patAgregarRubro(){
+  GAN.patrimonio.push({ rubro:'Nuevo rubro', inicio:0, cierre:0, tipo:'Otro' });
+  patRenderTabla();
+}
+
+function patRecalcular(){
+  const pat = GAN.patrimonio;
+
+  // Separar deudas (se restan del patrimonio)
+  const activos = pat.filter(r => r.tipo !== 'Deuda');
+  const deudas  = pat.filter(r => r.tipo === 'Deuda');
+
+  const totIniAct = activos.reduce((s,r)=>s+r.inicio, 0);
+  const totCieAct = activos.reduce((s,r)=>s+r.cierre, 0);
+  const totIniDeu = deudas.reduce((s,r)=>s+r.inicio, 0);
+  const totCieDeu = deudas.reduce((s,r)=>s+r.cierre, 0);
+
+  const patrimonioIni = totIniAct - totIniDeu;
+  const patrimonioOie = totCieAct - totCieDeu;
+  const variacion     = patrimonioOie - patrimonioIni;
+
+  const consumoPersonal = parseFloat(document.getElementById('pat-consumo-personal')?.value)||0;
+  const consumoOtros    = parseFloat(document.getElementById('pat-consumo-otros')?.value)||0;
+  const totalConsumos   = consumoPersonal + consumoOtros;
+
+  const rentaConsumida  = variacion + totalConsumos; // lo que debería justificar
+
+  // Base imponible desde panel resultado
+  const baseEl = document.getElementById('ded-res-base');
+  const baseImponible = baseEl ? parsePesos(baseEl.textContent) : 0;
+  const diferencia = baseImponible - rentaConsumida;
+
+  // ── Totales tabla ──
+  const totIni = pat.reduce((s,r)=>s+r.inicio,0);
+  const totCie = pat.reduce((s,r)=>s+r.cierre,0);
+  const totVar = totCie - totIni;
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(v); };
+  set('pat-tot-ini', totIni);
+  set('pat-tot-cie', totCie);
+  set('pat-tot-var', totVar);
+
+  // ── Panel derecho ──
+  const vDisplay = document.getElementById('pat-variacion-display');
+  const vTipo    = document.getElementById('pat-variacion-tipo');
+  if(vDisplay){
+    vDisplay.textContent = fmtPesos(variacion);
+    vDisplay.style.color = variacion >= 0 ? 'var(--ok)' : 'var(--danger)';
+  }
+  if(vTipo) vTipo.textContent = variacion >= 0 ? '▲ Incremento patrimonial' : '▼ Disminución patrimonial';
+
+  set('pat-r-ini',  patrimonioIni);
+  set('pat-r-cie',  patrimonioOie);
+  set('pat-r-var',  variacion);
+  set('pat-r-cons', totalConsumos);
+  set('pat-r-total',rentaConsumida);
+  set('pat-r-base', baseImponible);
+  set('pat-r-rca',  rentaConsumida);
+  set('pat-r-dif',  diferencia);
+
+  // Color de diferencia
+  const difRow = document.getElementById('pat-r-diferencia-row');
+  const difEl  = document.getElementById('pat-r-dif');
+  if(difEl) difEl.style.color = diferencia >= 0 ? 'var(--ok)' : 'var(--danger)';
+
+  // Semáforo
+  const sem = document.getElementById('pat-semaforo');
+  if(sem){
+    if(baseImponible === 0){
+      sem.style.background = 'var(--surface2)';
+      sem.style.color = 'var(--text3)';
+      sem.textContent = 'Ingresá la base imponible en el tab Resultado Impositivo';
+    } else if(diferencia >= 0){
+      sem.style.background = 'var(--ok-light)';
+      sem.style.color = 'var(--ok)';
+      sem.textContent = '✅ La ganancia declarada justifica el patrimonio';
+    } else {
+      sem.style.background = 'var(--danger-light)';
+      sem.style.color = 'var(--danger)';
+      sem.textContent = '⚠️ Posible diferencia patrimonial no justificada';
+    }
+  }
+
+  // Subtotales por tipo
+  const porTipo = document.getElementById('pat-por-tipo');
+  if(porTipo){
+    const tipos = {};
+    pat.forEach(r => {
+      if(!tipos[r.tipo]) tipos[r.tipo] = { ini:0, cie:0 };
+      tipos[r.tipo].ini += r.inicio;
+      tipos[r.tipo].cie += r.cierre;
+    });
+    porTipo.innerHTML = Object.entries(tipos).map(([tipo,v])=>{
+      const bg = PAT_TIPO_COLOR[tipo]||'var(--surface2)';
+      const var_ = v.cie - v.ini;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;background:${bg};border-radius:4px;padding:4px 8px">
+        <span style="font-weight:500">${tipo}</span>
+        <span style="font-weight:600;color:${var_>=0?'var(--ok)':'var(--danger)'}">${fmtPesos(var_)}</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 function ganInit(){
   if(!GAN.deducciones.length){
     GAN.deducciones = DEDUCCIONES_LIG.map(d=>({...d}));
+  }
+  if(!GAN.patrimonio || !GAN.patrimonio.length){
+    GAN.patrimonio = PAT_RUBROS_DEFAULT.map(r=>({...r}));
   }
   ganRenderVentas();
   ganRenderCompras();
@@ -4240,11 +4612,12 @@ function ganInit(){
 
 // ── NAVEGACIÓN DE TABS ──────────────────────────────────────────
 function ganTab(tab, el){
-  ['ventas','compras','resultado','deducciones'].forEach(t=>{
+  ['ventas','compras','resultado','deducciones','patrimonio'].forEach(t=>{
     document.getElementById('gan-panel-'+t).style.display = t===tab ? 'block' : 'none';
     document.getElementById('gan-tab-btn-'+t).classList.toggle('active', t===tab);
   });
   if(tab==='resultado'||tab==='deducciones') ganRecalcular();
+  if(tab==='patrimonio'){ patRenderTabla(); patRecalcular(); }
 }
 
 // ── FORMATO PESOS ───────────────────────────────────────────────
@@ -4284,6 +4657,76 @@ function ganParseFecha(raw){
 }
 
 // ── HELPER: parsear un archivo Excel de IVA (ventas o compras) ──
+// ── DICCIONARIO DE AUTO-CLASIFICACIÓN ───────────────────────────
+// Reglas: orden importa (se evalúan de arriba hacia abajo, primera que matchea gana)
+// Cada regla: { clasif, keywords[] }  — keywords en minúsculas, coincidencia parcial
+const GAN_REGLAS = [
+  // ── NO DEDUCIBLES (art. 92 LIG) — van primero porque son más específicas ──
+  { clasif:'No Deducible', kw:['multa','infraccion','infracción','penalidad','recargo por mora','interés punitorio','intereses punitorios','seguro de vida personal','gastos personales','indumentaria personal','restaurant personal','hotel personal','viaje personal'] },
+
+  // ── COSTOS (art. 58-65 LIG) ──
+  { clasif:'Costo', kw:['mercaderia','mercadería','materia prima','materias primas','insumo','insumos','stock','repuesto','repuestos','componente','componentes','producto terminado','productos terminados','envase','envases','embalaje','embalajes','compra de bienes','reventa','existencia'] },
+
+  // ── DEDUCIBLES (art. 85-91 LIG) ──
+  // Servicios profesionales
+  { clasif:'Deducible', kw:['honorario','honorarios','estudio contable','contador','contadora','abogado','abogada','escribano','escribana','consultor','consultora','asesor','asesoría','asesoría legal','gestor','gestoría'] },
+  // Alquileres y propiedad
+  { clasif:'Deducible', kw:['alquiler','alquiler oficina','alquiler local','alquiler depósito','alquiler galpón','locación','arrendamiento','expensas'] },
+  // Servicios públicos y utilities
+  { clasif:'Deducible', kw:['luz','edesur','edenor','edes','epec','luz y fuerza','electricidad','gas','metrogas','naturgy','camuzzi','litoral gas','agua','aysa','absa','cloacas'] },
+  // Telecomunicaciones
+  { clasif:'Deducible', kw:['telefono','teléfono','celular','internet','fibra','movistar','personal','claro','telecom','fibertel','cablevision','cablevisión','speedy','arnet','iplan','datatransfer','hosting','dominio','cloud','servidor','vpn'] },
+  // Seguros
+  { clasif:'Deducible', kw:['seguro','seguros','póliza','poliza','prima de seguro','sancor seguros','zurich','galeno','mapfre','federación patronal','provincia seguros','smg','osde','medicus','swiss medical','prepaga','obra social'] },
+  // Publicidad y marketing
+  { clasif:'Deducible', kw:['publicidad','marketing','publicacion','publicación','facebook ads','google ads','instagram','redes sociales','pauta','diseño gráfico','diseño grafico','imprenta','folleto','banner','agencia'] },
+  // Mantenimiento y reparaciones
+  { clasif:'Deducible', kw:['mantenimiento','reparación','reparacion','service','limpieza','fumigación','fumigacion','pintura','plomero','electricista','cerrajero','técnico','tecnico'] },
+  // Logística y transporte
+  { clasif:'Deducible', kw:['flete','correo','andreani','oca','correo argentino','dhl','fedex','ups','transporte','logística','logistica','envío','envio','delivery','mensajería','mensajeria','cadetería','cadeteria'] },
+  // Bancos y financiero
+  { clasif:'Deducible', kw:['comisión bancaria','comision bancaria','mantenimiento cuenta','costo tarjeta','renovacion tarjeta','débito automático','impuesto débito','impuesto credito','iibb retenido','ganancias retenido','retención','retencion','percepcion','percepción'] },
+  // Software y tecnología
+  { clasif:'Deducible', kw:['software','licencia','suscripcion','suscripción','adobe','microsoft','office','zoom','slack','dropbox','mercadopago','mercado pago','paypal','stripe','tango','bejerman','sistema de gestión','erp','crm','saas'] },
+  // Librería y papelería
+  { clasif:'Deducible', kw:['librería','libreria','papelería','papeleria','impresión','impresion','toner','cartucho','papel','tinta','utiles de oficina','útiles de oficina'] },
+  // Combustible y movilidad
+  { clasif:'Deducible', kw:['combustible','nafta','gasoil','ypf','shell','axion','petrobras','estación de servicio','peaje','garage','cochera','estacionamiento','autopista','aucba','au6'] },
+  // Capacitación
+  { clasif:'Deducible', kw:['capacitación','capacitacion','curso','cursos','seminario','congreso','suscripcion profesional','colegio profesional','matrícula profesional','matricula profesional'] },
+  // Sueldos y cargas sociales
+  { clasif:'Deducible', kw:['sueldo','sueldos','salario','salarios','jornal','afip cargas','afip contribuciones','contribuciones patronales','obra social empleados','art ','aseguradora de riesgos'] },
+];
+
+function ganAutoClasificar(desc){
+  if(!desc) return '';
+  const d = desc.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for(const regla of GAN_REGLAS){
+    if(regla.kw.some(k => d.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,'')))){
+      return regla.clasif;
+    }
+  }
+  return ''; // no matcheó
+}
+
+// ── AUTO-CLASIFICAR TODAS LAS COMPRAS SIN CLASIFICAR ────────────
+function ganAutoClasificarTodas(){
+  let cambiadas = 0;
+  GAN.compras.forEach(c => {
+    if(!c.clasif){
+      const sugerida = ganAutoClasificar(c.desc);
+      if(sugerida){ c.clasif = sugerida; cambiadas++; }
+    }
+  });
+  ganRenderCompras();
+  ganActualizarSubtotCompras();
+  ganRecalcular();
+  if(cambiadas > 0)
+    toast(`✨ ${cambiadas} comprobante${cambiadas!==1?'s':''} auto-clasificado${cambiadas!==1?'s':''}`, 'ok');
+  else
+    toast('ℹ️ No se encontraron coincidencias en las filas sin clasificar', 'ok');
+}
+
 function ganParsearArchivoIVA(arrayBuffer, modo){
   // modo: 'ventas' | 'compras'
   const wb = XLSX.read(new Uint8Array(arrayBuffer), {type:'array', cellDates:true});
@@ -4341,7 +4784,8 @@ function ganParsearArchivoIVA(arrayBuffer, modo){
         tipo:iT>=0?String(r[iT]):'FA', neto, iva21:iva21+iva27, iva105:iva105+iva5+iva25, total });
     } else {
       GAN.compras.push({ fecha:ganParseFecha(fechaRaw), desc:iD>=0?String(r[iD]):'',
-        tipo:iT>=0?String(r[iT]):'FA', neto, iva:ivaTotal, total, clasif:'', obs:'' });
+        tipo:iT>=0?String(r[iT]):'FA', neto, iva:ivaTotal, total,
+        clasif: 'Deducible', obs:'' });
     }
     added++;
   }
@@ -4532,7 +4976,7 @@ function ganActualizarTotCompras(){
 }
 
 function ganAgregarCompra(){
-  GAN.compras.push({fecha:'',desc:'',tipo:'FA',neto:0,iva:0,total:0,clasif:'',obs:''});
+  GAN.compras.push({fecha:'',desc:'',tipo:'FA',neto:0,iva:0,total:0,clasif:'Deducible',obs:''});
   GAN.filtroCompras='todos';
   ganRenderCompras();
 }
@@ -4602,6 +5046,17 @@ function ganRecalcular(){
   // Base imponible neta
   const baseImponible = resImpositivo - deducPers;
 
+  // V. Ingresos no alcanzados (informativos)
+  const monoIngresos   = parseFloat(document.getElementById('gr-mono-ingresos')?.value||0)||0;
+  const monoCuotas     = parseFloat(document.getElementById('gr-mono-cuotas')?.value||0)||0;
+  const depBruto       = parseFloat(document.getElementById('gr-dep-bruto')?.value||0)||0;
+  const depRetenciones = parseFloat(document.getElementById('gr-dep-retenciones')?.value||0)||0;
+  const depAportes     = parseFloat(document.getElementById('gr-dep-aportes')?.value||0)||0;
+  const alqBruto       = parseFloat(document.getElementById('gr-alq-bruto')?.value||0)||0;
+  const alqRetenciones = parseFloat(document.getElementById('gr-alq-retenciones')?.value||0)||0;
+  const otrosNoAlc     = parseFloat(document.getElementById('gr-otros-noalc')?.value||0)||0;
+  const totalNoAlc     = monoIngresos + depBruto + alqBruto + otrosNoAlc;
+
   // ── Actualizar DOM resultado ──────────────────────────────────
   const set = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(val); };
 
@@ -4612,6 +5067,7 @@ function ganRecalcular(){
   set('gr-resultado-bruto', resBruto);
   set('gr-gastos-ded', gastosLIB);
   set('gr-total-ded', totalDed);
+  set('gr-total-noalc', totalNoAlc);
 
   const finEl = document.getElementById('gr-resultado-final');
   const tipoEl = document.getElementById('gr-resultado-tipo');
@@ -4626,6 +5082,15 @@ function ganRecalcular(){
   s('res-ing',ingNetos); s('res-costo',costoVentas); s('res-bruto',resBruto);
   s('res-ded',totalDed); s('res-aj',totalAj); s('res-imp',resImpositivo);
   s('res-pers',deducPers); s('res-base',baseImponible);
+
+  // Resumen no alcanzados (panel derecho)
+  s('res-mono',    monoIngresos);
+  s('res-dep',     depBruto);
+  s('res-alq',     alqBruto);
+  s('res-otros-na',otrosNoAlc);
+  s('res-noalc-total', totalNoAlc);
+  s('res-ret-dep', depRetenciones);
+  s('res-ret-alq', alqRetenciones);
 
   // Panel deducciones
   const dd = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(val); };
@@ -4758,6 +5223,30 @@ function ganDescargarExcel(){
     const wsS = XLSX.utils.aoa_to_sheet(hs);
     wsS['!cols'] = [{wch:56},{wch:22}];
     XLSX.utils.book_append_sheet(wb, wsS, 'Resumen Ejecutivo');
+
+    // ── Hoja 6: Variación Patrimonial ──
+    const consumoP = parseFloat(document.getElementById('pat-consumo-personal')?.value)||0;
+    const consumoO = parseFloat(document.getElementById('pat-consumo-otros')?.value)||0;
+    const hp = [
+      ['VARIACIÓN PATRIMONIAL — art. 47° LIG','','',''],
+      ['Período Fiscal '+anio,'','',''],
+      ['','','',''],
+      ['Rubro / Bien','Valor Inicio ($)','Valor Cierre ($)','Variación ($)','Tipo'],
+    ];
+    GAN.patrimonio.forEach(r => hp.push([r.rubro, r.inicio, r.cierre, r.cierre-r.inicio, r.tipo]));
+    const totPRow = hp.length;
+    hp.push(['TOTALES',
+      `=SUM(B5:B${totPRow})`, `=SUM(C5:C${totPRow})`, `=SUM(D5:D${totPRow})`, '']);
+    hp.push(['','','','','']);
+    hp.push(['Patrimonio Inicio (Activos − Deudas)', '', '', '']);
+    hp.push(['Patrimonio Cierre (Activos − Deudas)', '', '', '']);
+    hp.push(['= Variación Patrimonial', '', '', '']);
+    hp.push(['(+) Consumos personales', consumoP, '', '']);
+    hp.push(['(+) Otros consumos', consumoO, '', '']);
+    hp.push(['= Renta consumida + Ahorro (justificación art. 47)', '', '', '']);
+    const wsP = XLSX.utils.aoa_to_sheet(hp);
+    wsP['!cols'] = [{wch:48},{wch:18},{wch:18},{wch:18},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, wsP, 'Variación Patrimonial');
 
     const anio = new Date().getFullYear();
     XLSX.writeFile(wb, `DDJJ_Ganancias_${anio}.xlsx`);

@@ -5204,47 +5204,60 @@ function ganRecalcular(){
 function ganDescargarExcel(){
   try {
     const wb = XLSX.utils.book_new();
+    const anio = new Date().getFullYear();
 
     // ── Hoja 1: IVA Ventas ──
-    const hv = [['Fecha','Descripción / Cliente','Tipo Cbte.','Neto Gravado ($)','IVA 21% ($)','IVA 10,5% ($)','Total ($)']];
-    GAN.ventas.forEach(v=>hv.push([v.fecha,v.desc,v.tipo,v.neto,v.iva21,v.iva105,v.total]));
-    hv.push(['','','','=SUM(D2:D'+hv.length+')','=SUM(E2:E'+hv.length+')','=SUM(F2:F'+hv.length+')','=SUM(G2:G'+hv.length+')']);
+    const hv = [['Fecha','Descripción / Cliente','Tipo Cbte.','Neto Gravado ($)','IVA 21% ($)','IVA 10,5% ($)','No Gravado ($)','Exento ($)','Otros Imp. ($)','Total ($)']];
+    GAN.ventas.forEach(v => hv.push([v.fecha, v.desc, v.tipo, v.neto||0, v.iva21||0, v.iva105||0, v.noGrav||0, v.exento||0, v.otrosImp||0, v.total||0]));
+    const totVRow = hv.length;
+    hv.push(['TOTALES','','',
+      `=SUM(D2:D${totVRow})`,`=SUM(E2:E${totVRow})`,`=SUM(F2:F${totVRow})`,
+      `=SUM(G2:G${totVRow})`,`=SUM(H2:H${totVRow})`,`=SUM(I2:I${totVRow})`,`=SUM(J2:J${totVRow})`]);
     const wsV = XLSX.utils.aoa_to_sheet(hv);
-    wsV['!cols'] = [{wch:14},{wch:36},{wch:12},{wch:18},{wch:16},{wch:16},{wch:18}];
+    wsV['!cols'] = [{wch:14},{wch:36},{wch:10},{wch:16},{wch:14},{wch:14},{wch:14},{wch:12},{wch:14},{wch:16}];
     XLSX.utils.book_append_sheet(wb, wsV, 'IVA Ventas');
 
     // ── Hoja 2: IVA Compras ──
-    const hc = [['Fecha','Descripción / Proveedor','Tipo Cbte.','Neto ($)','IVA CF ($)','Total ($)','Clasificación','Observaciones']];
-    GAN.compras.forEach(c=>hc.push([c.fecha,c.desc,c.tipo,c.neto,c.iva,c.total,c.clasif||'— Sin clasificar —',c.obs]));
-    const totRow = hc.length;
-    hc.push(['TOTALES','','','=SUM(D2:D'+totRow+')','=SUM(E2:E'+totRow+')','=SUM(F2:F'+totRow+')','','']);
-    hc.push(['COSTOS','','','=SUMIF(G2:G'+totRow+',"Costo",D2:D'+totRow+')','','','art. 58-65 LIG','']);
-    hc.push(['DEDUCIBLES','','','=SUMIF(G2:G'+totRow+',"Deducible",D2:D'+totRow+')','','','art. 85-91 LIG','']);
-    hc.push(['NO DEDUCIBLES','','','=SUMIF(G2:G'+totRow+',"No Deducible",D2:D'+totRow+')','','','art. 92 LIG','']);
+    const hc = [['Fecha','Descripción / Proveedor','Tipo Cbte.','Neto ($)','IVA CF ($)','No Gravado ($)','Exento ($)','Otros Imp. ($)','Total ($)','Clasificación','Observaciones']];
+    GAN.compras.forEach(c => hc.push([c.fecha, c.desc, c.tipo, c.neto||0, c.iva||0, c.noGrav||0, c.exento||0, c.otrosImp||0, c.total||0, c.clasif||'', c.obs||'']));
+    const totCRow = hc.length;
+    hc.push(['TOTALES','','',
+      `=SUM(D2:D${totCRow})`,`=SUM(E2:E${totCRow})`,`=SUM(F2:F${totCRow})`,
+      `=SUM(G2:G${totCRow})`,`=SUM(H2:H${totCRow})`,`=SUM(I2:I${totCRow})`,'','']);
+    hc.push(['COSTOS','','',`=SUMIF(J2:J${totCRow},"Costo",D2:D${totCRow})`,'','','','','','art. 58-65 LIG','']);
+    hc.push(['DEDUCIBLES','','',`=SUMIF(J2:J${totCRow},"Deducible",D2:D${totCRow})`,'','','','','','art. 85-91 LIG','']);
+    hc.push(['NO DEDUCIBLES','','',`=SUMIF(J2:J${totCRow},"No Deducible",D2:D${totCRow})`,'','','','','','art. 92 LIG','']);
     const wsC = XLSX.utils.aoa_to_sheet(hc);
-    wsC['!cols'] = [{wch:14},{wch:36},{wch:12},{wch:16},{wch:14},{wch:16},{wch:24},{wch:22}];
+    wsC['!cols'] = [{wch:14},{wch:36},{wch:10},{wch:14},{wch:12},{wch:14},{wch:12},{wch:14},{wch:14},{wch:22},{wch:20}];
     XLSX.utils.book_append_sheet(wb, wsC, 'IVA Compras y Gastos');
 
     // ── Hoja 3: Resultado Impositivo ──
-    const dv = parseFloat(document.getElementById('gr-devoluciones')?.value)||0;
-    const eI = parseFloat(document.getElementById('gr-exist-ini')?.value)||0;
-    const eF = parseFloat(document.getElementById('gr-exist-fin')?.value)||0;
-    const am = parseFloat(document.getElementById('gr-amortizaciones')?.value)||0;
-    const pr = parseFloat(document.getElementById('gr-previsiones')?.value)||0;
-    const od = parseFloat(document.getElementById('gr-otros-ded')?.value)||0;
-    const ajI = parseFloat(document.getElementById('gr-aj-inflacion')?.value)||0;
-    const ajC = parseFloat(document.getElementById('gr-aj-cambio')?.value)||0;
-    const rf = parseFloat(document.getElementById('gr-renta-fin')?.value)||0;
-    const qb = parseFloat(document.getElementById('gr-quebrantos')?.value)||0;
-    const oa = parseFloat(document.getElementById('gr-otros-aj')?.value)||0;
-    const ventasNetas = GAN.ventas.reduce((s,v)=>s+v.neto,0);
-    const costosPer = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+c.neto,0);
-    const gastosLIB = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+c.neto,0);
-    const deducPers = GAN.deducciones.filter(d=>d.aplica).reduce((s,d)=>s+d.monto,0);
+    const gv = id => parseFloat(document.getElementById(id)?.value)||0;
+    const dv=gv('gr-devoluciones'), eI=gv('gr-exist-ini'), eF=gv('gr-exist-fin');
+    const am=gv('gr-amortizaciones'), pr=gv('gr-previsiones'), od=gv('gr-otros-ded');
+    const ajI=gv('gr-aj-inflacion'), ajC=gv('gr-aj-cambio'), rf=gv('gr-renta-fin');
+    const qb=gv('gr-quebrantos'),   oa=gv('gr-otros-aj');
+    const monoIng=gv('gr-mono-ingresos'), monoCuotas=gv('gr-mono-cuotas');
+    const depBruto=gv('gr-dep-bruto'), depRet=gv('gr-dep-retenciones'), depAp=gv('gr-dep-aportes');
+    const alqBruto=gv('gr-alq-bruto'), alqRet=gv('gr-alq-retenciones');
+    const otrosNA=gv('gr-otros-noalc');
+    const otrosDesc = document.getElementById('gr-otros-desc')?.value||'';
+
+    const ventasNetas = GAN.ventas.reduce((s,v)=>s+(v.neto||0),0);
+    const costosPer   = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+(c.neto||0),0);
+    const gastosLIB   = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+(c.neto||0),0);
+    const deducPers   = GAN.deducciones.filter(d=>d.aplica).reduce((s,d)=>s+d.monto,0);
+    const ingNetos    = ventasNetas - dv;
+    const costoVentas = eI + costosPer - eF;
+    const resBruto    = ingNetos - costoVentas;
+    const totalDed    = gastosLIB + am + pr + od;
+    const totalAj     = ajI + ajC + rf - qb + oa;
+    const resImp      = resBruto - totalDed + totalAj;
+    const baseVal     = resImp - deducPers;
 
     const hr = [
       ['DETERMINACIÓN DEL RESULTADO IMPOSITIVO — IMPUESTO A LAS GANANCIAS','',''],
-      ['Ley 20.628 y modificatorias | Período Fiscal 2025','',''],
+      [`Ley 20.628 y modificatorias | Período Fiscal ${anio}`,'',''],
       ['','',''],
       ['I. INGRESOS GRAVADOS (art. 2° y 53° LIG)','Importe ($)','Referencia legal'],
       ['Ventas netas gravadas (sin IVA)',ventasNetas,'art. 2 LIG'],
@@ -5273,9 +5286,20 @@ function ganDescargarExcel(){
       ['(-) Quebrantos anteriores',-qb,'art. 19 LIG'],
       ['Otros ajustes',oa,'editable'],
       ['','',''],
-      ['▶ RESULTADO IMPOSITIVO FINAL','=B15-B22+B25+B26+B27+B28+B29',''],
+      ['▶ RESULTADO IMPOSITIVO FINAL',resImp,'=B15-B22+B25+B26+B27+B28+B29'],
       ['(-) Deducciones personales',deducPers,'art. 30 LIG'],
-      ['▶ BASE IMPONIBLE NETA','=B31-B32',''],
+      ['▶ BASE IMPONIBLE NETA',baseVal,''],
+      ['','',''],
+      ['V. INGRESOS NO ALCANZADOS (informativo)','',''],
+      ['Monotributo — ingresos brutos',monoIng,'Régimen simplificado'],
+      ['Monotributo — cuotas abonadas',monoCuotas,'Comp. impositivo'],
+      ['Relación de dependencia — remuneración bruta',depBruto,'SIRADIG'],
+      ['Relación de dependencia — retenciones F.649',depRet,'SIRADIG'],
+      ['Relación de dependencia — aportes',depAp,'art. 85 inc. c LIG'],
+      ['Alquileres — ingresos brutos',alqBruto,''],
+      ['Alquileres — retenciones/anticipos',alqRet,''],
+      [otrosDesc||'Otros no alcanzados',otrosNA,''],
+      ['= TOTAL NO ALCANZADOS',monoIng+depBruto+alqBruto+otrosNA,''],
     ];
     const wsR = XLSX.utils.aoa_to_sheet(hr);
     wsR['!cols'] = [{wch:52},{wch:22},{wch:26}];
@@ -5283,76 +5307,68 @@ function ganDescargarExcel(){
 
     // ── Hoja 4: Deducciones Personales ──
     const hd = [['Aplica','Concepto','Monto Anual ($)','Base Legal']];
-    GAN.deducciones.forEach(d=>hd.push([d.aplica?'SÍ':'NO',d.concepto,d.monto,d.base]));
+    GAN.deducciones.forEach(d => hd.push([d.aplica?'SÍ':'NO', d.concepto, d.monto, d.base]));
     const totD = hd.length;
-    hd.push(['TOTAL APLICABLES','','=SUMIF(A2:A'+totD+',"SÍ",C2:C'+totD+')','Solo marcadas SÍ']);
+    hd.push(['TOTAL APLICABLES','',`=SUMIF(A2:A${totD},"SÍ",C2:C${totD})`,'Solo marcadas SÍ']);
     const wsD = XLSX.utils.aoa_to_sheet(hd);
     wsD['!cols'] = [{wch:10},{wch:58},{wch:20},{wch:24}];
     XLSX.utils.book_append_sheet(wb, wsD, 'Deducciones Personales');
 
     // ── Hoja 5: Resumen Ejecutivo ──
-    const ingNetosVal = ventasNetas - dv;
-    const costoVentasVal = eI + costosPer - eF;
-    const resBrutoVal = ingNetosVal - costoVentasVal;
-    const totalDedVal = gastosLIB + am + pr + od;
-    const totalAjVal = ajI + ajC + rf - qb + oa;
-    const resImpVal = resBrutoVal - totalDedVal + totalAjVal;
-    const baseVal = resImpVal - deducPers;
-
     const hs = [
       ['RESUMEN EJECUTIVO — DDJJ IMPUESTO A LAS GANANCIAS',''],
-      ['Ley 20.628 | Período Fiscal 2025 | Base: Devengado',''],
+      [`Ley 20.628 | Período Fiscal ${anio} | Base: Devengado`,''],
       ['',''],
       ['Concepto','Importe ($)'],
-      ['I. Ingresos Netos del Período',ingNetosVal],
-      ['II. (-) Costo de Ventas',costoVentasVal],
-      ['= RESULTADO BRUTO',resBrutoVal],
-      ['III. (-) Gastos Deducibles',totalDedVal],
-      ['IV. (±) Ajustes Impositivos',totalAjVal],
-      ['= RESULTADO IMPOSITIVO',resImpVal],
-      ['(-) Deducciones Personales (art. 30 LIG)',deducPers],
-      ['= BASE IMPONIBLE NETA DEL IMPUESTO',baseVal],
+      ['I. Ingresos Netos del Período', ingNetos],
+      ['II. (-) Costo de Ventas', costoVentas],
+      ['= RESULTADO BRUTO', resBruto],
+      ['III. (-) Gastos Deducibles', totalDed],
+      ['IV. (±) Ajustes Impositivos', totalAj],
+      ['= RESULTADO IMPOSITIVO', resImp],
+      ['(-) Deducciones Personales (art. 30 LIG)', deducPers],
+      ['= BASE IMPONIBLE NETA DEL IMPUESTO', baseVal],
       ['',''],
-      [resImpVal>=0?'Estado: GANANCIA — corresponde tributar':'Estado: QUEBRANTO — art. 19 LIG',''],
+      [resImp>=0 ? 'Estado: GANANCIA — corresponde tributar' : 'Estado: QUEBRANTO — art. 19 LIG',''],
       ['',''],
-      ['Notas legales:',''],
-      ['• Normativa: LIG 20.628 y sus modificaciones (Ley 27.430, 27.617, 27.743)',''],
-      ['• Ajuste por inflación: Título VI LIG — art. 95 y ss.',''],
-      ['• Deducciones personales: art. 30 LIG (montos actualizados por AFIP)',''],
+      ['Ingresos no alcanzados (informativo)',''],
+      ['Monotributo', monoIng],
+      ['Relación de dependencia', depBruto],
+      ['Alquileres', alqBruto],
+      ['Otros', otrosNA],
+      ['',''],
+      ['• Normativa: LIG 20.628 y modificaciones (Ley 27.430, 27.617, 27.743)',''],
       ['• Verificar con Contador/a matriculado/a antes de presentar la DDJJ',''],
-      ['• Presentación: Aplicativo AFIP — Ganancias Personas Humanas / SIRADIG',''],
     ];
     const wsS = XLSX.utils.aoa_to_sheet(hs);
     wsS['!cols'] = [{wch:56},{wch:22}];
     XLSX.utils.book_append_sheet(wb, wsS, 'Resumen Ejecutivo');
 
     // ── Hoja 6: Variación Patrimonial ──
-    const consumoP = parseFloat(document.getElementById('pat-consumo-personal')?.value)||0;
-    const consumoO = parseFloat(document.getElementById('pat-consumo-otros')?.value)||0;
+    const incJustif = gv('pat-inc-justif');
     const hp = [
-      ['VARIACIÓN PATRIMONIAL — art. 47° LIG','','',''],
-      ['Período Fiscal '+anio,'','',''],
-      ['','','',''],
+      ['VARIACIÓN PATRIMONIAL — art. 47° LIG','','','',''],
+      [`Período Fiscal ${anio}`,'','','',''],
+      ['','','','',''],
       ['Rubro / Bien','Valor Inicio ($)','Valor Cierre ($)','Variación ($)','Tipo'],
     ];
     GAN.patrimonio.forEach(r => hp.push([r.rubro, r.inicio, r.cierre, r.cierre-r.inicio, r.tipo]));
     const totPRow = hp.length;
-    hp.push(['TOTALES',
-      `=SUM(B5:B${totPRow})`, `=SUM(C5:C${totPRow})`, `=SUM(D5:D${totPRow})`, '']);
+    hp.push(['TOTALES', `=SUM(B5:B${totPRow})`, `=SUM(C5:C${totPRow})`, `=SUM(D5:D${totPRow})`, '']);
     hp.push(['','','','','']);
-    hp.push(['Patrimonio Inicio (Activos − Deudas)', '', '', '']);
-    hp.push(['Patrimonio Cierre (Activos − Deudas)', '', '', '']);
-    hp.push(['= Variación Patrimonial', '', '', '']);
-    hp.push(['(+) Consumos personales', consumoP, '', '']);
-    hp.push(['(+) Otros consumos', consumoO, '', '']);
-    hp.push(['= Renta consumida + Ahorro (justificación art. 47)', '', '', '']);
+    hp.push(['CÁLCULO DEL CONSUMO (art. 47 LIG)','','','','']);
+    hp.push(['(+) Patrimonio al inicio','','','','']);
+    hp.push(['(+) Ingresos gravados (base imponible)',baseVal,'','','']);
+    hp.push(['(+) Ingresos no alcanzados',monoIng+depBruto+alqBruto+otrosNA,'','','']);
+    hp.push(['(-) Patrimonio al cierre','','','','']);
+    hp.push(['(-) Incrementos patrimoniales justificados',incJustif,'','','']);
+    hp.push(['= CONSUMO ESTIMADO DEL PERÍODO (mín. $0)','','','','']);
     const wsP = XLSX.utils.aoa_to_sheet(hp);
-    wsP['!cols'] = [{wch:48},{wch:18},{wch:18},{wch:18},{wch:16}];
+    wsP['!cols'] = [{wch:50},{wch:18},{wch:18},{wch:18},{wch:16}];
     XLSX.utils.book_append_sheet(wb, wsP, 'Variación Patrimonial');
 
-    const anio = new Date().getFullYear();
     XLSX.writeFile(wb, `DDJJ_Ganancias_${anio}.xlsx`);
-    toast('✅ Excel descargado con 5 hojas listo para usar','ok');
+    toast('✅ Excel descargado — 6 hojas','ok');
   } catch(err){
     toast('❌ Error al generar Excel: '+err.message,'danger');
   }

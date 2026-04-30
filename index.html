@@ -785,7 +785,7 @@ textarea{height:80px;resize:vertical}
               </div>
             </div>
             <div class="alert alert-afip" style="margin-bottom:1rem;font-size:12px">
-              💡 <strong>Formato esperado:</strong> Fecha · Descripción · Tipo Comprobante · Neto Gravado · IVA 21% · IVA 10,5% · Total. Las columnas se mapean automáticamente del libro IVA Digital de ARCA.
+              💡 Las columnas se mapean automáticamente del libro IVA Digital de ARCA, incluyendo No Gravado, Exento y Otros Impuestos.
             </div>
             <div class="table-wrap">
               <table id="gan-tabla-ventas">
@@ -797,6 +797,9 @@ textarea{height:80px;resize:vertical}
                     <th style="text-align:right">Neto Gravado ($)</th>
                     <th style="text-align:right">IVA 21% ($)</th>
                     <th style="text-align:right">IVA 10,5% ($)</th>
+                    <th style="text-align:right">No Gravado ($)</th>
+                    <th style="text-align:right">Exento ($)</th>
+                    <th style="text-align:right">Otros Imp. ($)</th>
                     <th style="text-align:right">Total ($)</th>
                     <th></th>
                   </tr>
@@ -808,6 +811,9 @@ textarea{height:80px;resize:vertical}
                     <td style="text-align:right;font-weight:700;color:var(--accent)" id="gan-tot-neto-v"></td>
                     <td style="text-align:right;font-weight:600;color:var(--accent)" id="gan-tot-iva21-v"></td>
                     <td style="text-align:right;font-weight:600;color:var(--accent)" id="gan-tot-iva105-v"></td>
+                    <td style="text-align:right;font-weight:600;color:var(--accent)" id="gan-tot-nograv-v"></td>
+                    <td style="text-align:right;font-weight:600;color:var(--accent)" id="gan-tot-exento-v"></td>
+                    <td style="text-align:right;font-weight:600;color:var(--accent)" id="gan-tot-otros-v"></td>
                     <td style="text-align:right;font-weight:700;color:var(--accent)" id="gan-tot-total-v"></td>
                     <td></td>
                   </tr>
@@ -855,6 +861,9 @@ textarea{height:80px;resize:vertical}
                     <th>Tipo Cbte.</th>
                     <th style="text-align:right">Neto ($)</th>
                     <th style="text-align:right">IVA CF ($)</th>
+                    <th style="text-align:right">No Gravado ($)</th>
+                    <th style="text-align:right">Exento ($)</th>
+                    <th style="text-align:right">Otros Imp. ($)</th>
                     <th style="text-align:right">Total ($)</th>
                     <th style="min-width:140px">Clasificación</th>
                     <th>Observ.</th>
@@ -867,6 +876,9 @@ textarea{height:80px;resize:vertical}
                     <td colspan="3" style="font-weight:600;font-size:12px;padding:10px">TOTALES</td>
                     <td style="text-align:right;font-weight:700" id="gan-tot-neto-c"></td>
                     <td style="text-align:right;font-weight:600" id="gan-tot-iva-c"></td>
+                    <td style="text-align:right;font-weight:600" id="gan-tot-nograv-c"></td>
+                    <td style="text-align:right;font-weight:600" id="gan-tot-exento-c"></td>
+                    <td style="text-align:right;font-weight:600" id="gan-tot-otros-c"></td>
                     <td style="text-align:right;font-weight:700" id="gan-tot-total-c"></td>
                     <td colspan="3"></td>
                   </tr>
@@ -1220,23 +1232,44 @@ textarea{height:80px;resize:vertical}
                 </div>
               </div>
 
-              <!-- Consumos -->
               <div class="card">
                 <div class="card-header" style="margin-bottom:.75rem">
-                  <div class="card-title">Consumos del período <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 47° inc. d LIG)</span></div>
+                  <div class="card-title">Consumos del período <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 47° inc. d LIG — cálculo automático)</span></div>
                 </div>
                 <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;line-height:1.5">
-                  Son los gastos personales y familiares no computados como gasto de la actividad: alimentos, vestimenta, educación, turismo, etc.
+                  Fórmula: <strong>Patrimonio Inicio + Ingresos totales − Patrimonio Cierre − Incrementos patrimoniales justificados</strong>. Si el resultado es negativo se considera $0 (el consumo no puede ser negativo).
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                  <div>
-                    <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Gastos personales estimados ($)</label>
-                    <input type="number" id="pat-consumo-personal" value="0" style="font-size:14px" oninput="patRecalcular()" placeholder="0">
+
+                <!-- Fórmula visual -->
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:1rem">
+                  <div class="venc-row">
+                    <span style="color:var(--text3)">(+) Patrimonio al inicio</span>
+                    <span id="pat-cons-ini" style="font-weight:500">$0,00</span>
                   </div>
-                  <div>
-                    <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Otros consumos / gastos de sustento ($)</label>
-                    <input type="number" id="pat-consumo-otros" value="0" style="font-size:14px" oninput="patRecalcular()" placeholder="0">
+                  <div class="venc-row">
+                    <span style="color:var(--text3)">(+) Ingresos gravados (base imponible)</span>
+                    <span id="pat-cons-grav" style="font-weight:500">$0,00</span>
                   </div>
+                  <div class="venc-row">
+                    <span style="color:var(--text3)">(+) Ingresos no alcanzados</span>
+                    <span id="pat-cons-noalc" style="font-weight:500">$0,00</span>
+                  </div>
+                  <div class="venc-row">
+                    <span style="color:var(--text3)">(−) Patrimonio al cierre</span>
+                    <span id="pat-cons-cie" style="font-weight:500">$0,00</span>
+                  </div>
+                  <div class="venc-row">
+                    <span style="color:var(--text3)">(−) Incrementos patrimoniales justificados</span>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span style="color:var(--text3);font-size:11px">$</span>
+                      <input type="number" id="pat-inc-justif" value="0" style="width:130px;text-align:right;font-size:13px" oninput="patRecalcular()" placeholder="0">
+                    </div>
+                  </div>
+                  <div class="venc-row" style="background:var(--accent-light);border-radius:var(--radius);padding:10px;margin-top:4px;border:none">
+                    <strong style="color:var(--accent)">= Consumo estimado del período</strong>
+                    <strong style="font-size:16px;color:var(--accent)" id="pat-cons-resultado">$0,00</strong>
+                  </div>
+                  <div id="pat-cons-aviso" style="font-size:11px;color:var(--text3);font-style:italic;text-align:right;display:none">⚠️ Resultado negativo → se usa $0</div>
                 </div>
               </div>
             </div>
@@ -4406,7 +4439,7 @@ function ganConfirmarReiniciar(){
    'gr-renta-fin','gr-quebrantos','gr-otros-aj',
    'gr-mono-ingresos','gr-mono-cuotas','gr-dep-bruto','gr-dep-retenciones',
    'gr-dep-aportes','gr-alq-bruto','gr-alq-retenciones','gr-otros-noalc',
-   'pat-consumo-personal','pat-consumo-otros'].forEach(id=>{
+   'pat-inc-justif'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = 0;
   });
 
@@ -4503,7 +4536,7 @@ function patAgregarRubro(){
 function patRecalcular(){
   const pat = GAN.patrimonio;
 
-  // Separar deudas (se restan del patrimonio)
+  // Separar activos y deudas
   const activos = pat.filter(r => r.tipo !== 'Deuda');
   const deudas  = pat.filter(r => r.tipo === 'Deuda');
 
@@ -4513,19 +4546,31 @@ function patRecalcular(){
   const totCieDeu = deudas.reduce((s,r)=>s+r.cierre, 0);
 
   const patrimonioIni = totIniAct - totIniDeu;
-  const patrimonioOie = totCieAct - totCieDeu;
-  const variacion     = patrimonioOie - patrimonioIni;
+  const patrimonioCie = totCieAct - totCieDeu;
+  const variacion     = patrimonioCie - patrimonioIni;
 
-  const consumoPersonal = parseFloat(document.getElementById('pat-consumo-personal')?.value)||0;
-  const consumoOtros    = parseFloat(document.getElementById('pat-consumo-otros')?.value)||0;
-  const totalConsumos   = consumoPersonal + consumoOtros;
-
-  const rentaConsumida  = variacion + totalConsumos; // lo que debería justificar
-
-  // Base imponible desde panel resultado
+  // Ingresos gravados: base imponible neta
   const baseEl = document.getElementById('ded-res-base');
-  const baseImponible = baseEl ? parsePesos(baseEl.textContent) : 0;
-  const diferencia = baseImponible - rentaConsumida;
+  const baseImponible = baseEl ? (parsePesos(baseEl.textContent)||0) : 0;
+
+  // Ingresos no alcanzados: tomados del panel resultado
+  const monoIngresos = parseFloat(document.getElementById('gr-mono-ingresos')?.value||0)||0;
+  const depBruto     = parseFloat(document.getElementById('gr-dep-bruto')?.value||0)||0;
+  const alqBruto     = parseFloat(document.getElementById('gr-alq-bruto')?.value||0)||0;
+  const otrosNoAlc   = parseFloat(document.getElementById('gr-otros-noalc')?.value||0)||0;
+  const totalNoAlc   = monoIngresos + depBruto + alqBruto + otrosNoAlc;
+
+  // Incrementos patrimoniales justificados (editable)
+  const incJustif = parseFloat(document.getElementById('pat-inc-justif')?.value||0)||0;
+
+  // ── FÓRMULA ART. 47 ──────────────────────────────────────────
+  // Consumo = PatrimonioInicio + IngGravados + IngNoAlc − PatrimonioCierre − IncPatrJustif
+  const consumoCalc   = patrimonioIni + baseImponible + totalNoAlc - patrimonioCie - incJustif;
+  const totalConsumos = Math.max(0, consumoCalc); // no puede ser negativo
+  const esNegativo    = consumoCalc < 0;
+
+  const rentaConsumida = variacion + totalConsumos;
+  const diferencia     = baseImponible - rentaConsumida;
 
   // ── Totales tabla ──
   const totIni = pat.reduce((s,r)=>s+r.inicio,0);
@@ -4536,6 +4581,19 @@ function patRecalcular(){
   set('pat-tot-cie', totCie);
   set('pat-tot-var', totVar);
 
+  // ── Fórmula visual consumo ──
+  set('pat-cons-ini',   patrimonioIni);
+  set('pat-cons-grav',  baseImponible);
+  set('pat-cons-noalc', totalNoAlc);
+  set('pat-cons-cie',   patrimonioCie);
+  const resEl = document.getElementById('pat-cons-resultado');
+  if(resEl){
+    resEl.textContent = fmtPesos(totalConsumos);
+    resEl.style.color = totalConsumos > 0 ? 'var(--accent)' : 'var(--text3)';
+  }
+  const avisoEl = document.getElementById('pat-cons-aviso');
+  if(avisoEl) avisoEl.style.display = esNegativo ? 'block' : 'none';
+
   // ── Panel derecho ──
   const vDisplay = document.getElementById('pat-variacion-display');
   const vTipo    = document.getElementById('pat-variacion-tipo');
@@ -4545,27 +4603,24 @@ function patRecalcular(){
   }
   if(vTipo) vTipo.textContent = variacion >= 0 ? '▲ Incremento patrimonial' : '▼ Disminución patrimonial';
 
-  set('pat-r-ini',  patrimonioIni);
-  set('pat-r-cie',  patrimonioOie);
-  set('pat-r-var',  variacion);
-  set('pat-r-cons', totalConsumos);
-  set('pat-r-total',rentaConsumida);
-  set('pat-r-base', baseImponible);
-  set('pat-r-rca',  rentaConsumida);
-  set('pat-r-dif',  diferencia);
-
-  // Color de diferencia
-  const difRow = document.getElementById('pat-r-diferencia-row');
-  const difEl  = document.getElementById('pat-r-dif');
+  set('pat-r-ini',   patrimonioIni);
+  set('pat-r-cie',   patrimonioCie);
+  set('pat-r-var',   variacion);
+  set('pat-r-cons',  totalConsumos);
+  set('pat-r-total', rentaConsumida);
+  set('pat-r-base',  baseImponible);
+  set('pat-r-rca',   rentaConsumida);
+  set('pat-r-dif',   diferencia);
+  const difEl = document.getElementById('pat-r-dif');
   if(difEl) difEl.style.color = diferencia >= 0 ? 'var(--ok)' : 'var(--danger)';
 
   // Semáforo
   const sem = document.getElementById('pat-semaforo');
   if(sem){
-    if(baseImponible === 0){
+    if(baseImponible === 0 && totalNoAlc === 0){
       sem.style.background = 'var(--surface2)';
       sem.style.color = 'var(--text3)';
-      sem.textContent = 'Ingresá la base imponible en el tab Resultado Impositivo';
+      sem.textContent = 'Ingresá los ingresos en el tab Resultado Impositivo';
     } else if(diferencia >= 0){
       sem.style.background = 'var(--ok-light)';
       sem.style.color = 'var(--ok)';
@@ -4728,7 +4783,6 @@ function ganAutoClasificarTodas(){
 }
 
 function ganParsearArchivoIVA(arrayBuffer, modo){
-  // modo: 'ventas' | 'compras'
   const wb = XLSX.read(new Uint8Array(arrayBuffer), {type:'array', cellDates:true});
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows    = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
@@ -4737,55 +4791,92 @@ function ganParsearArchivoIVA(arrayBuffer, modo){
   let headerRow = 0;
   for(let i=0;i<Math.min(rows.length,10);i++){
     const r = rows[i].map(c=>String(c).toLowerCase());
-    if(r.some(c=>c.includes('fecha')||c.includes('neto')||c.includes('comprobante')||c.includes('proveedor')||c.includes('cliente')))
+    if(r.some(c=>c.includes('fecha')||c.includes('neto')||c.includes('comprobante')||c.includes('denominaci')))
       { headerRow=i; break; }
   }
   const headers = rows[headerRow].map(c=>String(c).toLowerCase().trim());
-  const findCol = (...terms) => {
+  const fc = (...terms) => {
     for(const t of terms){ const x=headers.findIndex(h=>h===t); if(x>=0) return x; }
     for(const t of terms){ const x=headers.findIndex(h=>h.includes(t)); if(x>=0) return x; }
     return -1;
   };
 
-  const iF   = findCol('fecha');
-  const iD   = findCol('denominación','razón social','razon social','proveedor','cliente','descripcion','nombre');
-  const iT   = findCol('tipo de comprobante','tipo comprobante','tipo cbte','tipo');
-  const iTot = findCol('importe total','total comprobante','total');
-  const iN21  = findCol('neto gravado iva 21','neto gravado 21');
-  const iN105 = findCol('neto gravado iva 10,5','neto gravado iva 10.5','neto gravado 10,5','neto gravado 10.5');
-  const iN5   = findCol('neto gravado iva 5%','neto gravado iva 5','neto gravado 5%','neto gravado 5');
-  const iN25  = findCol('neto gravado iva 2,5','neto gravado 2,5');
-  const iN27  = findCol('neto gravado iva 27','neto gravado 27');
-  const iNgen = findCol('neto gravado','neto_gravado','importe neto gravado','importe neto');
-  const iIVA21  = findCol('importe iva 21','iva 21%','iva 21','iva21');
-  const iIVA105 = findCol('importe iva 10,5','importe iva 10.5','iva 10,5','iva 10.5','iva 10','iva10');
-  const iIVA5   = findCol('importe iva 5%','importe iva 5','iva 5%','iva 5');
-  const iIVA25  = findCol('importe iva 2,5','importe iva 2.5','iva 2,5');
-  const iIVA27  = findCol('importe iva 27','iva 27');
-  const iIVAgen = findCol('crédito fiscal','credito fiscal','impuesto liquidado');
+  // Columnas comunes
+  const iF    = fc('fecha de emisión','fecha');
+  const iD    = fc('denominación comprador','denominación vendedor','denominación','razón social','razon social','proveedor','cliente');
+  const iT    = fc('tipo de comprobante','tipo comprobante','tipo cbte','tipo');
+  const iTot  = fc('importe total','total comprobante','total');
+
+  // Neto gravado por alícuota
+  const iN21  = fc('neto gravado iva 21');
+  const iN105 = fc('neto gravado iva 10,5','neto gravado iva 10.5');
+  const iN5   = fc('neto gravado iva 5%','neto gravado iva 5');
+  const iN25  = fc('neto gravado iva 2,5','neto gravado iva 2.5');
+  const iN27  = fc('neto gravado iva 27');
+  const iNTot = fc('total neto gravado');
+
+  // IVA por alícuota
+  const iIVA21  = fc('importe iva 21');
+  const iIVA105 = fc('importe iva 10,5','importe iva 10.5');
+  const iIVA5   = fc('importe iva 5%','importe iva 5');
+  const iIVA25  = fc('importe iva 2,5','importe iva 2.5');
+  const iIVA27  = fc('importe iva 27');
+  const iIVATot = fc('total iva','crédito fiscal computable','credito fiscal computable');
+
+  // Columnas extra ARCA
+  const iNoGrav  = fc('importe no gravado');
+  const iExento  = fc('importe exento');
+  const iPercNac = fc('importe de per. o pagos a cta. de otros imp. nac.','pagos a cta');
+  const iPercIIBB= fc('importe de percepciones de ingresos brutos','ingresos brutos');
+  const iPercMun = fc('importe de impuestos municipales','impuestos municipales');
+  const iPercNoCat=fc('percepción a no categorizados','no categorizados');
+  const iImpInt  = fc('importe de impuestos internos','impuestos internos');
+  const iOtrosTrib=fc('importe otros tributos','otros tributos');
+  const iPercIVA = fc('importe de percepciones o pagos a cuenta de iva','percepciones o pagos a cuenta de iva');
 
   let added = 0;
   for(let i=headerRow+1;i<rows.length;i++){
     const r=rows[i]; const rRaw=rowsRaw[i]||[];
-    let neto=0;
+
+    // Neto gravado: usar columnas por alícuota o total
+    let neto = 0;
     if(iN21>=0||iN105>=0||iN5>=0||iN25>=0||iN27>=0)
-      neto=parsePesos(r[iN21])+parsePesos(r[iN105])+parsePesos(r[iN5])+parsePesos(r[iN25])+parsePesos(r[iN27]);
-    else if(iNgen>=0) neto=parsePesos(r[iNgen]);
+      neto = parsePesos(r[iN21])+parsePesos(r[iN105])+parsePesos(r[iN5])+parsePesos(r[iN25])+parsePesos(r[iN27]);
+    else if(iNTot>=0) neto = parsePesos(r[iNTot]);
+
+    // IVA: por alícuota o total
     const iva21=parsePesos(r[iIVA21]), iva105=parsePesos(r[iIVA105]);
     const iva5=parsePesos(r[iIVA5]),   iva25=parsePesos(r[iIVA25]), iva27=parsePesos(r[iIVA27]);
-    let ivaGen=0;
-    if(!iva21&&!iva105&&!iva5&&!iva25&&!iva27&&iIVAgen>=0) ivaGen=parsePesos(r[iIVAgen]);
-    const ivaTotal=iva21+iva105+iva5+iva25+iva27+ivaGen;
-    const total=parsePesos(r[iTot])||(neto+ivaTotal);
-    if(!neto&&!ivaTotal&&!total) continue;
-    const fechaRaw=iF>=0?(rRaw[iF]!==undefined?rRaw[iF]:r[iF]):'';
+    let ivaTotal = iva21+iva105+iva5+iva25+iva27;
+    if(!ivaTotal && iIVATot>=0) ivaTotal = parsePesos(r[iIVATot]);
+
+    // Columnas extra
+    const noGrav   = parsePesos(r[iNoGrav]);
+    const exento   = parsePesos(r[iExento]);
+    const percNac  = parsePesos(r[iPercNac]);
+    const percIIBB = parsePesos(r[iPercIIBB]);
+    const percMun  = parsePesos(r[iPercMun]);
+    const percNoCat= parsePesos(r[iPercNoCat]);
+    const impInt   = parsePesos(r[iImpInt]);
+    const otrosTrib= parsePesos(r[iOtrosTrib]);
+    const percIVA  = parsePesos(r[iPercIVA]);
+    const otrosImp = percNac + percIIBB + percMun + percNoCat + impInt + otrosTrib + percIVA;
+
+    const total = parsePesos(r[iTot]) || (neto + ivaTotal + noGrav + exento + otrosImp);
+    if(!total && !neto) continue;
+
+    const fechaRaw = iF>=0?(rRaw[iF]!==undefined?rRaw[iF]:r[iF]):'';
     if(modo==='ventas'){
       GAN.ventas.push({ fecha:ganParseFecha(fechaRaw), desc:iD>=0?String(r[iD]):'',
-        tipo:iT>=0?String(r[iT]):'FA', neto, iva21:iva21+iva27, iva105:iva105+iva5+iva25, total });
+        tipo:iT>=0?String(r[iT]):'FA',
+        neto, iva21:iva21+iva27, iva105:iva105+iva5+iva25,
+        noGrav, exento, otrosImp, total });
     } else {
       GAN.compras.push({ fecha:ganParseFecha(fechaRaw), desc:iD>=0?String(r[iD]):'',
-        tipo:iT>=0?String(r[iT]):'FA', neto, iva:ivaTotal, total,
-        clasif: 'Deducible', obs:'' });
+        tipo:iT>=0?String(r[iT]):'FA',
+        neto, iva:ivaTotal,
+        noGrav, exento, otrosImp, total,
+        clasif:'Deducible', obs:'' });
     }
     added++;
   }
@@ -4875,17 +4966,21 @@ function ganRenderVentas(){
   const empty = document.getElementById('gan-empty-ventas');
   if(!GAN.ventas.length){ tbody.innerHTML=''; empty.style.display='block'; ganActualizarTotVentas(); return; }
   empty.style.display='none';
+  const recalcTotal = i => `GAN.ventas[${i}].total=GAN.ventas[${i}].neto+GAN.ventas[${i}].iva21+GAN.ventas[${i}].iva105+(GAN.ventas[${i}].noGrav||0)+(GAN.ventas[${i}].exento||0)+(GAN.ventas[${i}].otrosImp||0);ganRenderVentas();ganRecalcular()`;
   tbody.innerHTML = GAN.ventas.map((v,i)=>`
     <tr>
       <td><input type="date" value="${v.fecha}" style="width:120px;font-size:12px" onchange="GAN.ventas[${i}].fecha=this.value;ganRecalcular()"></td>
-      <td><input type="text" value="${v.desc}" style="font-size:12px" onchange="GAN.ventas[${i}].desc=this.value"></td>
+      <td><input type="text" value="${v.desc||''}" style="font-size:12px" onchange="GAN.ventas[${i}].desc=this.value"></td>
       <td><select style="font-size:12px;width:80px" onchange="GAN.ventas[${i}].tipo=this.value">
         ${['FA','FB','NCA','NCB','NDA','NDB'].map(t=>`<option ${t===v.tipo?'selected':''}>${t}</option>`).join('')}
       </select></td>
-      <td style="text-align:right"><input type="number" value="${v.neto}" style="width:110px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].neto=parseFloat(this.value)||0;GAN.ventas[${i}].total=GAN.ventas[${i}].neto+GAN.ventas[${i}].iva21+GAN.ventas[${i}].iva105;ganRenderVentas();ganRecalcular()"></td>
-      <td style="text-align:right"><input type="number" value="${v.iva21}" style="width:90px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].iva21=parseFloat(this.value)||0;GAN.ventas[${i}].total=GAN.ventas[${i}].neto+GAN.ventas[${i}].iva21+GAN.ventas[${i}].iva105;ganRenderVentas();ganRecalcular()"></td>
-      <td style="text-align:right"><input type="number" value="${v.iva105}" style="width:90px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].iva105=parseFloat(this.value)||0;GAN.ventas[${i}].total=GAN.ventas[${i}].neto+GAN.ventas[${i}].iva21+GAN.ventas[${i}].iva105;ganRenderVentas();ganRecalcular()"></td>
-      <td style="text-align:right;font-weight:500">${fmtPesos(v.total)}</td>
+      <td style="text-align:right"><input type="number" value="${v.neto||0}" style="width:100px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].neto=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${v.iva21||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].iva21=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${v.iva105||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].iva105=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${v.noGrav||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].noGrav=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${v.exento||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].exento=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${v.otrosImp||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.ventas[${i}].otrosImp=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right;font-weight:600">${fmtPesos(v.total)}</td>
       <td><button class="action-btn del" onclick="GAN.ventas.splice(${i},1);ganRenderVentas();ganRecalcular()" title="Eliminar">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
       </button></td>
@@ -4894,18 +4989,19 @@ function ganRenderVentas(){
 }
 
 function ganActualizarTotVentas(){
-  const totN = GAN.ventas.reduce((s,v)=>s+v.neto,0);
-  const tot21 = GAN.ventas.reduce((s,v)=>s+v.iva21,0);
-  const tot105 = GAN.ventas.reduce((s,v)=>s+v.iva105,0);
-  const totT = GAN.ventas.reduce((s,v)=>s+v.total,0);
-  document.getElementById('gan-tot-neto-v').textContent = fmtPesos(totN);
-  document.getElementById('gan-tot-iva21-v').textContent = fmtPesos(tot21);
-  document.getElementById('gan-tot-iva105-v').textContent = fmtPesos(tot105);
-  document.getElementById('gan-tot-total-v').textContent = fmtPesos(totT);
+  const s = f => GAN.ventas.reduce((acc,v)=>acc+(v[f]||0),0);
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(v); };
+  set('gan-tot-neto-v',   s('neto'));
+  set('gan-tot-iva21-v',  s('iva21'));
+  set('gan-tot-iva105-v', s('iva105'));
+  set('gan-tot-nograv-v', s('noGrav'));
+  set('gan-tot-exento-v', s('exento'));
+  set('gan-tot-otros-v',  s('otrosImp'));
+  set('gan-tot-total-v',  s('total'));
 }
 
 function ganAgregarVenta(){
-  GAN.ventas.push({fecha:'',desc:'',tipo:'FA',neto:0,iva21:0,iva105:0,total:0});
+  GAN.ventas.push({fecha:'',desc:'',tipo:'FA',neto:0,iva21:0,iva105:0,noGrav:0,exento:0,otrosImp:0,total:0});
   ganRenderVentas();
 }
 
@@ -4928,19 +5024,23 @@ function ganRenderCompras(){
   if(!GAN.compras.length){ tbody.innerHTML=''; empty.style.display='block'; ganActualizarSubtotCompras(); return; }
   empty.style.display='none';
 
+  const recalcTotal = i => `GAN.compras[${i}].total=GAN.compras[${i}].neto+GAN.compras[${i}].iva+(GAN.compras[${i}].noGrav||0)+(GAN.compras[${i}].exento||0)+(GAN.compras[${i}].otrosImp||0);ganRenderCompras();ganRecalcular()`;
   const clsColor = {Costo:'var(--ok-light)',Deducible:'var(--blue-light)','No Deducible':'var(--danger-light)','':'var(--warn-light)'};
   tbody.innerHTML = datos.map((c,j)=>{
     const i=idxMap[j];
     const bg = clsColor[c.clasif]||clsColor[''];
     return `<tr>
       <td><input type="date" value="${c.fecha}" style="width:120px;font-size:12px" onchange="GAN.compras[${i}].fecha=this.value"></td>
-      <td><input type="text" value="${c.desc}" style="font-size:12px" onchange="GAN.compras[${i}].desc=this.value"></td>
+      <td><input type="text" value="${c.desc||''}" style="font-size:12px" onchange="GAN.compras[${i}].desc=this.value"></td>
       <td><select style="font-size:12px;width:80px" onchange="GAN.compras[${i}].tipo=this.value">
         ${['FA','FB','NCA','NCB','Ticket','Otro'].map(t=>`<option ${t===c.tipo?'selected':''}>${t}</option>`).join('')}
       </select></td>
-      <td style="text-align:right"><input type="number" value="${c.neto}" style="width:100px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].neto=parseFloat(this.value)||0;GAN.compras[${i}].total=GAN.compras[${i}].neto+GAN.compras[${i}].iva;ganRenderCompras();ganRecalcular()"></td>
-      <td style="text-align:right"><input type="number" value="${c.iva}" style="width:90px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].iva=parseFloat(this.value)||0;GAN.compras[${i}].total=GAN.compras[${i}].neto+GAN.compras[${i}].iva;ganRenderCompras();ganRecalcular()"></td>
-      <td style="text-align:right;font-weight:500">${fmtPesos(c.total)}</td>
+      <td style="text-align:right"><input type="number" value="${c.neto||0}" style="width:90px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].neto=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${c.iva||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].iva=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${c.noGrav||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].noGrav=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${c.exento||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].exento=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right"><input type="number" value="${c.otrosImp||0}" style="width:85px;text-align:right;font-size:12px" onchange="GAN.compras[${i}].otrosImp=parseFloat(this.value)||0;${recalcTotal(i)}"></td>
+      <td style="text-align:right;font-weight:600">${fmtPesos(c.total)}</td>
       <td style="background:${bg}">
         <select style="font-size:12px;font-weight:600;background:${bg};border:none;width:100%" onchange="GAN.compras[${i}].clasif=this.value;ganRenderCompras();ganActualizarSubtotCompras();ganRecalcular()">
           <option value="" ${!c.clasif?'selected':''}>— Clasificar —</option>
@@ -4949,7 +5049,7 @@ function ganRenderCompras(){
           <option value="No Deducible" ${c.clasif==='No Deducible'?'selected':''}>No Deducible (art.92)</option>
         </select>
       </td>
-      <td><input type="text" value="${c.obs||''}" style="font-size:11px;width:100px" placeholder="Obs..." onchange="GAN.compras[${i}].obs=this.value"></td>
+      <td><input type="text" value="${c.obs||''}" style="font-size:11px;width:90px" placeholder="Obs..." onchange="GAN.compras[${i}].obs=this.value"></td>
       <td><button class="action-btn del" onclick="GAN.compras.splice(${i},1);ganRenderCompras();ganRecalcular()" title="Eliminar">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
       </button></td>
@@ -4967,16 +5067,18 @@ function ganActualizarSubtotCompras(){
 }
 
 function ganActualizarTotCompras(){
-  const totN=GAN.compras.reduce((s,c)=>s+c.neto,0);
-  const totI=GAN.compras.reduce((s,c)=>s+c.iva,0);
-  const totT=GAN.compras.reduce((s,c)=>s+c.total,0);
-  document.getElementById('gan-tot-neto-c').textContent=fmtPesos(totN);
-  document.getElementById('gan-tot-iva-c').textContent=fmtPesos(totI);
-  document.getElementById('gan-tot-total-c').textContent=fmtPesos(totT);
+  const s = f => GAN.compras.reduce((acc,c)=>acc+(c[f]||0),0);
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(v); };
+  set('gan-tot-neto-c',   s('neto'));
+  set('gan-tot-iva-c',    s('iva'));
+  set('gan-tot-nograv-c', s('noGrav'));
+  set('gan-tot-exento-c', s('exento'));
+  set('gan-tot-otros-c',  s('otrosImp'));
+  set('gan-tot-total-c',  s('total'));
 }
 
 function ganAgregarCompra(){
-  GAN.compras.push({fecha:'',desc:'',tipo:'FA',neto:0,iva:0,total:0,clasif:'Deducible',obs:''});
+  GAN.compras.push({fecha:'',desc:'',tipo:'FA',neto:0,iva:0,noGrav:0,exento:0,otrosImp:0,total:0,clasif:'Deducible',obs:''});
   GAN.filtroCompras='todos';
   ganRenderCompras();
 }

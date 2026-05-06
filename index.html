@@ -422,12 +422,14 @@ textarea{height:80px;resize:vertical}
         <!-- Fila 2: Todos / Pendientes / Completados -->
         <div style="margin-bottom:1rem">
           <div class="tabs" style="margin-bottom:0;width:fit-content">
-            <button class="tab active" id="venc-estado-tab-todos" onclick="filterVenc('todos',this)">Todos</button>
-            <button class="tab" id="venc-estado-tab-pendiente" onclick="filterVenc('pendiente',this)">Pendientes</button>
+            <button class="tab active" id="venc-estado-tab-pendiente" onclick="filterVenc('pendiente',this)">Pendientes</button>
             <button class="tab" id="venc-estado-tab-completado" onclick="filterVenc('completado',this)">Completados</button>
+            <button class="tab" id="venc-estado-tab-todos" onclick="filterVenc('todos',this)">Todos</button>
           </div>
         </div>
         <div id="alert-venc"></div>
+        <!-- Alerta si hay venc incorrectos de monotributistas -->
+        <div id="alert-venc-mono"></div>
         <div class="card">
           <div id="tabla-vencimientos"></div>
           <div id="empty-venc" class="empty" style="display:none"><p>No hay tareas. Agregá la primera o importá desde AFIP.</p></div>
@@ -741,7 +743,6 @@ textarea{height:80px;resize:vertical}
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               <input type="text" placeholder="Buscar cliente o servicio..." id="search-accesos" oninput="renderAccesos()">
             </div>
-            <select id="filter-accesos-cliente" onchange="renderAccesos()" style="width:auto;font-size:12px;max-width:200px"><option value="">Todos los clientes</option></select>
           </div>
           <div class="table-wrap">
             <table>
@@ -1754,10 +1755,6 @@ function generarSugs(cliente,mes){
     }
   }else if(cat==='Monotributo'){
     const f1=getAfip('MONO',mes,t);if(f1)s.push({tipo:'Monotributo',fecha:f1,org:'ARCA',anual:false});
-    if(mes===6){
-      const f3=getAfip('GANANCIAS_ANUAL',mes,t);if(f3)s.push({tipo:'Ganancias — DDJJ Anual',fecha:f3,org:'ARCA',anual:true});
-      const f4=getAfip('BIENES_ANUAL',mes,t);if(f4)s.push({tipo:'Bienes Personales — DDJJ Anual',fecha:f4,org:'ARCA',anual:true});
-    }
   }
 
   // ── IIBB mensual según régimen ─────────────────────
@@ -1811,7 +1808,7 @@ function generarSugs(cliente,mes){
 // STATE
 // ═══════════════════════════════════════════
 let db={clientes:[],vencimientos:[],cobros:[],accesos:[]};
-let currentUser=null,editId=null,vencFiltro='todos',vencGrupoFiltro='mensual',cobrosFiltro='todos';
+let currentUser=null,editId=null,vencFiltro='pendiente',vencGrupoFiltro='mensual',cobrosFiltro='todos';
 let sugsImportar=[],sugsClienteId='';
 
 // ═══════════════════════════════════════════
@@ -2271,6 +2268,24 @@ function filterVenc(f,el){
   if(el)el.classList.add('active');
   renderVencimientos();
 }
+async function limpiarVencMonotributistas(){
+  const tiposIncorrectos = ['Ganancias — DDJJ Anual','Bienes Personales — DDJJ Anual'];
+  const monotributistas  = new Set(db.clientes.filter(c=>c.categoria==='Monotributo').map(c=>c.id));
+  const aEliminar = db.vencimientos.filter(v =>
+    tiposIncorrectos.includes(v.tipo) && monotributistas.has(v.cliente_id)
+  );
+  if(!aEliminar.length){ toast('No hay registros incorrectos para limpiar'); return; }
+  if(!confirm(`Se eliminarán ${aEliminar.length} vencimiento${aEliminar.length>1?'s':''} de Ganancias/Bienes Personales asignados a monotributistas. ¿Continuar?`)) return;
+  setSyncing(true);
+  const ids = aEliminar.map(v=>v.id);
+  const res = await sb.from('vencimientos').delete().in('id', ids);
+  setSyncing(false);
+  if(res.error){ toast('Error: '+res.error.message); return; }
+  db.vencimientos = db.vencimientos.filter(v=>!ids.includes(v.id));
+  toast(`✅ ${aEliminar.length} vencimiento${aEliminar.length>1?'s':''} eliminado${aEliminar.length>1?'s':''}`,'ok');
+  renderVencimientos();
+}
+
 function renderVencimientos(){
   populateSelects();
   const fC=document.getElementById('filter-venc-cliente')?.value||'';
@@ -2285,6 +2300,20 @@ function renderVencimientos(){
   else if(vencGrupoFiltro==='mensual')list=list.filter(v=>!esVencAnual(v));
   const urg=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=3).length;
   document.getElementById('alert-venc').innerHTML=urg>0?`<div class="alert alert-danger">⚠ ${urg} tarea${urg>1?'s':''} con vencimiento en menos de 3 días.</div>`:'';
+
+  // Detectar monotributistas con Ganancias/Bienes cargados incorrectamente
+  const tiposIncorrectos=['Ganancias — DDJJ Anual','Bienes Personales — DDJJ Anual'];
+  const monotributistas=new Set(db.clientes.filter(c=>c.categoria==='Monotributo').map(c=>c.id));
+  const incorrectos=db.vencimientos.filter(v=>tiposIncorrectos.includes(v.tipo)&&monotributistas.has(v.cliente_id));
+  const monoAlertEl=document.getElementById('alert-venc-mono');
+  if(monoAlertEl){
+    monoAlertEl.innerHTML=incorrectos.length
+      ?`<div class="alert" style="background:var(--warn-light);border:1px solid #e6c26a;color:var(--warn);margin-bottom:.75rem;display:flex;align-items:center;gap:12px">
+          <span>⚠️ Se encontraron <strong>${incorrectos.length}</strong> vencimiento${incorrectos.length>1?'s':''} de Ganancias/Bienes Personales asignados a monotributistas (no corresponden).</span>
+          <button class="btn btn-sm" onclick="limpiarVencMonotributistas()" style="border-color:var(--warn);color:var(--warn);white-space:nowrap;flex-shrink:0">Limpiar ahora</button>
+        </div>`
+      :'';
+  }
   const pend=db.vencimientos.filter(v=>v.estado!=='completado'&&daysTo(v.fecha)<=7).length;
   const badge=document.getElementById('badge-venc');badge.textContent=pend;badge.style.display=pend>0?'':'none';
   const tb=document.getElementById('tabla-vencimientos'),em=document.getElementById('empty-venc');
@@ -2749,18 +2778,10 @@ async function guardarAcceso(){
 
 function renderAccesos(){
   populateSelects();
-  // popular filtro de clientes específico de accesos
-  const selFiltro=document.getElementById('filter-accesos-cliente');
-  if(selFiltro){
-    selFiltro.innerHTML='<option value="">Todos los clientes</option>'+
-      db.clientes.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
-  }
   const q=(document.getElementById('search-accesos')?.value||'').toLowerCase();
-  const fC=document.getElementById('filter-accesos-cliente')?.value||'';
   let list=db.accesos.filter(a=>{
     const c=getCliente(a.cliente_id);
-    const match=(c.nombre+a.servicio+a.usuario).toLowerCase().includes(q);
-    return match&&(!fC||a.cliente_id===fC);
+    return (c.nombre+a.servicio+a.usuario).toLowerCase().includes(q);
   });
   // ordenar por cliente y luego servicio
   list.sort((a,b)=>{
@@ -3730,8 +3751,8 @@ const TAREA_CONFIG={
   'SICORE — Percepción Ganancias':   {afipKey:'SICORE',          org:'ARCA',   filtro:c=>!!(c.agente_percepcion_ganancias)},
   'IIBB — Agente de percepción':     {afipKey:'IIBB',            org:'ARBA',   filtro:c=>!!(c.agente_percepcion)},
   // ── Anuales ──
-  'Ganancias — DDJJ Anual':          {afipKey:'GANANCIAS_ANUAL', org:'ARCA',   filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6,  anual:true},
-  'Bienes Personales — DDJJ Anual':  {afipKey:'BIENES_ANUAL',   org:'ARCA',   filtro:c=>c.categoria==='Responsable Inscripto'||c.categoria==='Monotributo', soloMes:6,  anual:true},
+  'Ganancias — DDJJ Anual':          {afipKey:'GANANCIAS_ANUAL', org:'ARCA',   filtro:c=>c.categoria==='Responsable Inscripto', soloMes:6,  anual:true},
+  'Bienes Personales — DDJJ Anual':  {afipKey:'BIENES_ANUAL',   org:'ARCA',   filtro:c=>c.categoria==='Responsable Inscripto', soloMes:6,  anual:true},
   'Ganancias PJ — DDJJ Anual':       {afipKey:'GANANCIAS_PJ_ANUAL',org:'ARCA', filtro:c=>c.categoria==='Responsable Inscripto', soloMes:5, anual:true},
   'IIBB — DDJJ Anual ARBA':          {afipKey:'IIBB_ARBA_ANUAL', org:'ARBA',   filtro:c=>c.iibb_regimen==='local'||c.iibb_regimen==='simplificado', soloMes:4, anual:true},
   'IIBB — DDJJ Anual Conv. Multilateral':{afipKey:'IIBB_CM_ANUAL',org:'COMARB',filtro:c=>c.iibb_regimen==='cm', soloMes:6, anual:true},
@@ -3859,9 +3880,21 @@ function previsualizarMesCompleto(){
   const nuevas=todas.filter(x=>!x.existe);
   const yaExisten=todas.filter(x=>x.existe).length;
 
+  // Calcular cuántos pendientes anteriores se van a reemplazar
+  const tiposEnJuego=[...new Set(todas.map(x=>x.tipo))];
+  const clientesEnJuego=[...new Set(todas.map(x=>x.cliente.id))];
+  const paresNuevos=todas.map(x=>({cliente_id:x.cliente.id,tipo:x.tipo,fecha:x.fecha}));
+  const pendientesAReemplazar=db.vencimientos.filter(v=>
+    v.estado!=='completado'&&
+    clientesEnJuego.includes(v.cliente_id)&&
+    tiposEnJuego.includes(v.tipo)&&
+    !paresNuevos.some(p=>p.cliente_id===v.cliente_id&&p.tipo===v.tipo&&p.fecha===v.fecha)
+  ).length;
+
   // Resumen header
   document.getElementById('mmc-resumen-header').innerHTML=
-    `<strong>${nuevas.length}</strong> tareas nuevas · <span style="color:var(--text3)">${yaExisten} ya cargadas (se omiten)</span> · <span style="color:var(--text3)">${clientes.length} clientes activos</span>`;
+    `<strong>${nuevas.length}</strong> tareas nuevas · <span style="color:var(--text3)">${yaExisten} ya cargadas (se omiten)</span> · <span style="color:var(--text3)">${clientes.length} clientes activos</span>`+
+    (pendientesAReemplazar>0?` · <span style="color:var(--warn)">⚠ ${pendientesAReemplazar} pendiente${pendientesAReemplazar>1?'s':''} anterior${pendientesAReemplazar>1?'es':''} se reemplazará${pendientesAReemplazar>1?'n':''}</span>`:'');
   document.getElementById('mmc-count').textContent=`(${nuevas.length})`;
 
   // Aviso sin CUIT
@@ -3910,14 +3943,18 @@ async function ejecutarMesCompleto(){
   const mes=parseInt(document.getElementById('mmc-mes').value);
   const clientes=db.clientes.filter(c=>c.estado==='Activo');
   const nuevos=[];
+  // Rastrear qué pares cliente+tipo vamos a generar
+  const paresAGenerar=[];
 
   clientes.forEach(c=>{
     const t=termCuit(c.cuit||'');
     if(t===null)return;
     const sugs=generarSugs(c,mes);
     sugs.forEach(s=>{
-      const existe=db.vencimientos.some(v=>v.cliente_id===c.id&&v.tipo===s.tipo&&v.fecha===s.fecha);
-      if(!existe)nuevos.push({
+      paresAGenerar.push({cliente_id:c.id,tipo:s.tipo,fecha:s.fecha});
+      // Solo agregar si no existe exactamente esa fecha ya
+      const existeExacto=db.vencimientos.some(v=>v.cliente_id===c.id&&v.tipo===s.tipo&&v.fecha===s.fecha);
+      if(!existeExacto)nuevos.push({
         cliente_id:c.id,tipo:s.tipo,fecha:s.fecha,
         estado:'pendiente',responsable:'',
         notas:`Generado mes completo — ${MESES[mes]} 2026`,
@@ -3926,26 +3963,52 @@ async function ejecutarMesCompleto(){
     });
   });
 
-  if(!nuevos.length){toast('No hay vencimientos nuevos para generar');return;}
+  if(!nuevos.length&&!paresAGenerar.length){toast('No hay vencimientos para generar');return;}
 
   const btn=document.getElementById('btn-generar-mes');
   btn.disabled=true;btn.textContent='Generando...';
   setSyncing(true);
 
-  // Insertar en lotes de 50 para no exceder límites
-  const loteSize=50;
+  // ── Paso 1: eliminar pendientes del mismo tipo/cliente que NO coincidan en fecha ──
+  // (son de meses anteriores no completados — se reemplazan por los nuevos)
+  const tiposEnJuego=[...new Set(paresAGenerar.map(p=>p.tipo))];
+  const clientesEnJuego=[...new Set(paresAGenerar.map(p=>p.cliente_id))];
+
+  const pendientesABorrar=db.vencimientos.filter(v=>
+    v.estado!=='completado' &&               // ← nunca tocar completados
+    clientesEnJuego.includes(v.cliente_id) &&
+    tiposEnJuego.includes(v.tipo) &&
+    !paresAGenerar.some(p=>p.cliente_id===v.cliente_id&&p.tipo===v.tipo&&p.fecha===v.fecha)
+  );
+
+  if(pendientesABorrar.length){
+    const idsBorrar=pendientesABorrar.map(v=>v.id);
+    const resDel=await sb.from('vencimientos').delete().in('id',idsBorrar);
+    if(resDel.error){
+      setSyncing(false);btn.disabled=false;btn.textContent='Generar todas las tareas';
+      toast('Error al limpiar pendientes anteriores: '+resDel.error.message);return;
+    }
+    db.vencimientos=db.vencimientos.filter(v=>!idsBorrar.includes(v.id));
+  }
+
+  // ── Paso 2: insertar los nuevos ──
   let insertados=0;
-  for(let i=0;i<nuevos.length;i+=loteSize){
-    const lote=nuevos.slice(i,i+loteSize);
-    const res=await sb.from('vencimientos').insert(lote).select();
-    if(res.error){setSyncing(false);btn.disabled=false;btn.textContent='Generar todas las tareas';toast('Error: '+res.error.message);return;}
-    db.vencimientos.push(...res.data);
-    insertados+=res.data.length;
+  if(nuevos.length){
+    const loteSize=50;
+    for(let i=0;i<nuevos.length;i+=loteSize){
+      const lote=nuevos.slice(i,i+loteSize);
+      const res=await sb.from('vencimientos').insert(lote).select();
+      if(res.error){setSyncing(false);btn.disabled=false;btn.textContent='Generar todas las tareas';toast('Error: '+res.error.message);return;}
+      db.vencimientos.push(...res.data);
+      insertados+=res.data.length;
+    }
   }
 
   setSyncing(false);
   btn.disabled=false;btn.textContent='Generar todas las tareas';
-  toast(`✅ ${insertados} vencimiento${insertados>1?'s':''} generado${insertados>1?'s':''} para ${MESES[mes]}`);
+
+  const msgBorrados=pendientesABorrar.length?` · ${pendientesABorrar.length} pendiente${pendientesABorrar.length>1?'s':''} anterior${pendientesABorrar.length>1?'es':''} reemplazado${pendientesABorrar.length>1?'s':''}`:'' ;
+  toast(`✅ ${insertados} vencimiento${insertados>1?'s':''} generado${insertados>1?'s':''} para ${MESES[mes]}${msgBorrados}`);
   closeModal('modal-mes-completo');
   renderVencimientos();
   renderAll();

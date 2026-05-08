@@ -244,7 +244,7 @@ textarea{height:80px;resize:vertical}
       <button class="nav-item" onclick="nav('ganancias',this)" style="color:var(--ok)">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>DDJJ Ganancias
       </button>
-      <button class="nav-item" onclick="nav('facturacion',this)" style="color:var(--accent)">
+      <button class="nav-item" onclick="nav('facturacion',this)" style="color:var(--accent);display:none">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Facturación
       </button>
     </nav>
@@ -2188,11 +2188,12 @@ function setLoadingMsg(m){document.getElementById('loading-msg').textContent=m;}
 async function loadAll(){
   setLoadingMsg('Cargando datos...');
   try {
+    const uid = currentUser.id;
     const [r1, r2, r3, r4] = await withTimeout(Promise.all([
-      sb.from('clientes').select('*').order('nombre'),
-      sb.from('vencimientos').select('*').order('fecha'),
-      sb.from('cobros').select('*').order('created_at', {ascending:false}),
-      sb.from('accesos').select('*').order('created_at', {ascending:false})
+      sb.from('clientes').select('*').eq('user_id', uid).order('nombre'),
+      sb.from('vencimientos').select('*').eq('user_id', uid).order('fecha'),
+      sb.from('cobros').select('*').eq('user_id', uid).order('created_at', {ascending:false}),
+      sb.from('accesos').select('*').eq('user_id', uid).order('created_at', {ascending:false})
     ]), 12000, 'Tiempo de carga agotado');
     db.clientes  = r1.data || [];
     db.vencimientos = r2.data || [];
@@ -2390,7 +2391,7 @@ async function guardarCliente(){
   if(!nombre){toast('El nombre es obligatorio');return;}
   const btn=document.getElementById('btn-guardar-cliente');btn.disabled=true;
   setSyncing(true);
-  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion_ganancias:document.getElementById('mc-agente-perc-gan').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,created_by:currentUser.id};
+  const data={nombre,cuit:document.getElementById('mc-cuit').value.trim(),categoria:document.getElementById('mc-cat').value,email:document.getElementById('mc-email').value.trim(),tel:document.getElementById('mc-tel').value.trim(),honorario:document.getElementById('mc-honorario').value||null,estado:document.getElementById('mc-estado').value,notas:document.getElementById('mc-notas').value.trim(),iibb_regimen:document.getElementById('mc-iibb').value||null,agente_retencion:document.getElementById('mc-agente-ret').checked,agente_percepcion_ganancias:document.getElementById('mc-agente-perc-gan').checked,agente_percepcion:document.getElementById('mc-agente-perc').checked,created_by:currentUser.id,user_id:currentUser.id};
   let res;
   if(editId){res=await sb.from('clientes').update(data).eq('id',editId).select().single();}
   else{res=await sb.from('clientes').insert(data).select().single();}
@@ -2487,7 +2488,7 @@ async function guardarVencimiento(){
   if(!fecha){toast('La fecha es obligatoria');return;}
   const btn=document.getElementById('btn-guardar-venc');btn.disabled=true;
   setSyncing(true);
-  const data={cliente_id:clienteId,tipo:document.getElementById('mv-tipo').value,fecha,responsable:document.getElementById('mv-resp').value.trim(),estado:document.getElementById('mv-estado').value,notas:document.getElementById('mv-notas').value.trim(),origen:'manual',created_by:currentUser.id};
+  const data={cliente_id:clienteId,tipo:document.getElementById('mv-tipo').value,fecha,responsable:document.getElementById('mv-resp').value.trim(),estado:document.getElementById('mv-estado').value,notas:document.getElementById('mv-notas').value.trim(),origen:'manual',created_by:currentUser.id,user_id:currentUser.id};
   let res;
   if(editId){res=await sb.from('vencimientos').update(data).eq('id',editId).select().single();}
   else{res=await sb.from('vencimientos').insert(data).select().single();}
@@ -2684,7 +2685,7 @@ async function guardarCobro(){
   if(!clienteId||!concepto||!importe){toast('Cliente, concepto e importe son obligatorios');return;}
   const btn=document.getElementById('btn-guardar-cobro');btn.disabled=true;
   setSyncing(true);
-  const data={cliente_id:clienteId,concepto,importe:Number(importe),vencimiento:null,fecha_cobro:document.getElementById('mcob-fecha').value||null,medio:document.getElementById('mcob-medio').value,estado:document.getElementById('mcob-estado').value,created_by:currentUser.id};
+  const data={cliente_id:clienteId,concepto,importe:Number(importe),vencimiento:null,fecha_cobro:document.getElementById('mcob-fecha').value||null,medio:document.getElementById('mcob-medio').value,estado:document.getElementById('mcob-estado').value,created_by:currentUser.id,user_id:currentUser.id};
   let res;
   if(editId){res=await sb.from('cobros').update(data).eq('id',editId).select().single();}
   else{res=await sb.from('cobros').insert(data).select().single();}
@@ -2818,7 +2819,8 @@ async function marcarCobradoMensual(clienteId, cid, mes, anio, cobroId){
     estado:'cobrado',
     fecha_cobro:hoy,
     vencimiento:`${anio}-${mesStr}-01`,
-    created_by:currentUser.id
+    created_by:currentUser.id,
+    user_id:currentUser.id
   };
   setSyncing(true);
   let res;
@@ -3023,7 +3025,8 @@ async function guardarAcceso(){
     usuario:document.getElementById('macc-usuario').value.trim(),
     password:document.getElementById('macc-pass').value,
     notas:document.getElementById('macc-notas').value.trim(),
-    created_by:currentUser.id
+    created_by:currentUser.id,
+    user_id:currentUser.id
   };
   let res;
   if(editId){res=await sb.from('accesos').update(data).eq('id',editId).select().single();}
@@ -3438,7 +3441,7 @@ async function importarSugeridas(){
   const nuevos=[];
   sugsImportar.forEach((s,i)=>{
     const cb=document.getElementById('sug-'+i);
-    if(cb&&!cb.disabled&&cb.checked)nuevos.push({cliente_id:sugsClienteId,tipo:s.tipo,fecha:s.fecha,estado:'pendiente',responsable:'',notas:`Importado desde calendario ${s.org||'ARCA'} 2026`,origen:'afip',created_by:currentUser.id});
+    if(cb&&!cb.disabled&&cb.checked)nuevos.push({cliente_id:sugsClienteId,tipo:s.tipo,fecha:s.fecha,estado:'pendiente',responsable:'',notas:`Importado desde calendario ${s.org||'ARCA'} 2026`,origen:'afip',created_by:currentUser.id,user_id:currentUser.id});
   });
   if(!nuevos.length){toast('No seleccionaste ningún vencimiento');return;}
   setSyncing(true);
@@ -4093,7 +4096,7 @@ async function ejecutarImportTarea(){
     if(!fecha)return;
     const existe=db.vencimientos.some(v=>v.cliente_id===c.id&&v.tipo===tipo&&v.fecha===fecha);
     if(existe)return;
-    nuevos.push({cliente_id:c.id,tipo,fecha,estado:'pendiente',responsable:'',notas:`Importado en lote — ${MESES[mes]} 2026`,origen:'afip',created_by:currentUser.id});
+    nuevos.push({cliente_id:c.id,tipo,fecha,estado:'pendiente',responsable:'',notas:`Importado en lote — ${MESES[mes]} 2026`,origen:'afip',created_by:currentUser.id,user_id:currentUser.id});
   });
 
   if(!nuevos.length){toast('No hay vencimientos nuevos para importar');return;}
@@ -4218,7 +4221,7 @@ async function ejecutarMesCompleto(){
         cliente_id:c.id,tipo:s.tipo,fecha:s.fecha,
         estado:'pendiente',responsable:'',
         notas:`Generado mes completo — ${MESES[mes]} 2026`,
-        origen:'afip',created_by:currentUser.id
+        origen:'afip',created_by:currentUser.id,user_id:currentUser.id
       });
     });
   });

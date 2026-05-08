@@ -244,7 +244,7 @@ textarea{height:80px;resize:vertical}
       <button class="nav-item" onclick="nav('ganancias',this)" style="color:var(--ok)">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>DDJJ Ganancias
       </button>
-      <button class="nav-item" onclick="nav('facturacion',this)" style="color:var(--accent);display:none">
+      <button class="nav-item" id="nav-facturacion" onclick="nav('facturacion',this)" style="color:var(--accent);display:none">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Facturación
       </button>
     </nav>
@@ -2230,6 +2230,11 @@ function showApp(){
   const name=currentUser?.user_metadata?.name||currentUser?.email?.split('@')[0]||'Usuario';
   document.getElementById('user-name').textContent=name;
   document.getElementById('user-avatar').textContent=name.slice(0,2).toUpperCase();
+  // Mostrar Facturación solo para cp.leonardocirone
+  const navFact = document.getElementById('nav-facturacion');
+  if(navFact && currentUser?.email === 'cp.leonardocirone@gmail.com'){
+    navFact.style.display = '';
+  }
   document.getElementById('sf-date').textContent=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
   renderAll();
   renderCalendario();

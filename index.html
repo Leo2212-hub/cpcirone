@@ -919,7 +919,7 @@ textarea{height:80px;resize:vertical}
                   <div class="card-title">I — Ingresos Gravados <span style="font-size:12px;font-weight:400;color:var(--text3)">(art. 2° y 53° LIG)</span></div>
                 </div>
                 <div id="gan-bloque-ingresos">
-                  <div class="venc-row"><span>Ventas netas gravadas (sin IVA)</span><span style="font-weight:600" id="gr-ventas-netas">$0,00</span></div>
+                  <div class="venc-row"><span>Ventas netas (Total − IVA − Otros imp.)</span><span style="font-weight:600" id="gr-ventas-netas">$0,00</span></div>
                   <div class="venc-row">
                     <span>(-) Devoluciones y descuentos <span style="color:var(--text3);font-size:11px">(editable)</span></span>
                     <div style="display:flex;align-items:center;gap:8px">
@@ -984,6 +984,11 @@ textarea{height:80px;resize:vertical}
                 <div class="venc-row" style="background:var(--blue-light);border-radius:var(--radius);padding:10px;margin-top:4px;border:none">
                   <strong style="color:var(--blue)">= Total Gastos Deducibles</strong>
                   <strong style="font-size:16px;color:var(--blue)" id="gr-total-ded">$0,00</strong>
+                </div>
+                <!-- Fila informativa IVA + otros impuestos compras — no resta de base -->
+                <div class="venc-row" style="margin-top:.5rem;opacity:.85">
+                  <span style="font-size:12px">IVA + Otros impuestos de compras <span style="color:var(--text3);font-size:11px">(informativo — no alcanzado por Ganancias)</span></span>
+                  <span style="font-weight:600;font-size:13px;color:var(--text2)" id="gr-iva-otros-compras">$0,00</span>
                 </div>
               </div>
 
@@ -1088,6 +1093,14 @@ textarea{height:80px;resize:vertical}
                   <div class="venc-row">
                     <span>Importe ($)</span>
                     <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--text3)">$</span><input type="number" id="gr-otros-noalc" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()"></div>
+                  </div>
+                  <div class="venc-row">
+                    <span>IVA + Otros impuestos de ventas <span style="font-size:11px;color:var(--text3)">(percepciones, internos, etc.)</span></span>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <button class="btn btn-sm" style="font-size:10px;padding:2px 6px" onclick="ganAutoIvaVentas()" title="Calcular desde IVA Ventas">↻</button>
+                      <span style="color:var(--text3)">$</span>
+                      <input type="number" id="gr-iva-otros-ventas" value="0" style="width:120px;text-align:right;font-size:13px" oninput="ganRecalcular()">
+                    </div>
                   </div>
                 </div>
 
@@ -4769,7 +4782,7 @@ function ganConfirmarReiniciar(){
    'gr-previsiones','gr-otros-ded','gr-aj-inflacion','gr-aj-cambio',
    'gr-renta-fin','gr-quebrantos','gr-otros-aj',
    'gr-mono-ingresos','gr-mono-cuotas','gr-dep-bruto','gr-dep-retenciones',
-   'gr-dep-aportes','gr-alq-bruto','gr-alq-retenciones','gr-otros-noalc',
+   'gr-dep-aportes','gr-alq-bruto','gr-alq-retenciones','gr-otros-noalc','gr-iva-otros-ventas',
    'pat-inc-justif'].forEach(id=>{
     const el = document.getElementById(id); if(el) el.value = 0;
   });
@@ -4889,7 +4902,8 @@ function patRecalcular(){
   const depBruto     = parseFloat(document.getElementById('gr-dep-bruto')?.value||0)||0;
   const alqBruto     = parseFloat(document.getElementById('gr-alq-bruto')?.value||0)||0;
   const otrosNoAlc   = parseFloat(document.getElementById('gr-otros-noalc')?.value||0)||0;
-  const totalNoAlc   = monoIngresos + depBruto + alqBruto + otrosNoAlc;
+  const ivaOtrosVentas = parseFloat(document.getElementById('gr-iva-otros-ventas')?.value||0)||0;
+  const totalNoAlc   = monoIngresos + depBruto + alqBruto + otrosNoAlc + ivaOtrosVentas;
 
   // Incrementos patrimoniales justificados (editable)
   const incJustif = parseFloat(document.getElementById('pat-inc-justif')?.value||0)||0;
@@ -4981,6 +4995,12 @@ function patRecalcular(){
       </div>`;
     }).join('');
   }
+}
+
+function ganAutoIvaVentas(){
+  const total = GAN.ventas.reduce((s,v)=>s+(v.iva21||0)+(v.iva105||0)+(v.otrosImp||0),0);
+  const el = document.getElementById('gr-iva-otros-ventas');
+  if(el){ el.value = total.toFixed(2); ganRecalcular(); }
 }
 
 function ganInit(){
@@ -5391,7 +5411,7 @@ function ganRenderCompras(){
 }
 
 function ganActualizarSubtotCompras(){
-  const sum = cls => GAN.compras.filter(c=>c.clasif===cls).reduce((s,c)=>s+c.neto,0);
+  const sum = (cls) => GAN.compras.filter(c=>c.clasif===cls).reduce((s,c)=>s+(c.total||0)-(c.iva||0)-(c.otrosImp||0),0);
   document.getElementById('gan-sub-costo').textContent = fmtPesos(sum('Costo'));
   document.getElementById('gan-sub-deducible').textContent = fmtPesos(sum('Deducible'));
   document.getElementById('gan-sub-noded').textContent = fmtPesos(sum('No Deducible'));
@@ -5442,13 +5462,13 @@ function ganActualizarTotalDed(){
 // ── RECALCULAR ───────────────────────────────────────────────────
 function ganRecalcular(){
   // I. Ingresos
-  const ventasNetas = GAN.ventas.reduce((s,v)=>s+v.neto,0);
+  const ventasNetas = GAN.ventas.reduce((s,v)=>s+(v.total||0)-(v.iva21||0)-(v.iva105||0)-(v.otrosImp||0),0);
   const devoluciones = parseFloat(document.getElementById('gr-devoluciones')?.value||0)||0;
   const ingNetos = ventasNetas - devoluciones;
 
   // II. Costos
   const existIni = parseFloat(document.getElementById('gr-exist-ini')?.value||0)||0;
-  const costosPer = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+c.neto,0);
+  const costosPer = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+(c.total||0)-(c.iva||0)-(c.otrosImp||0),0);
   const existFin = parseFloat(document.getElementById('gr-exist-fin')?.value||0)||0;
   const costoVentas = existIni + costosPer - existFin;
 
@@ -5456,7 +5476,7 @@ function ganRecalcular(){
   const resBruto = ingNetos - costoVentas;
 
   // III. Gastos Deducibles
-  const gastosLIB = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+c.neto,0);
+  const gastosLIB = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+(c.total||0)-(c.iva||0)-(c.otrosImp||0),0);
   const amort = parseFloat(document.getElementById('gr-amortizaciones')?.value||0)||0;
   const prev = parseFloat(document.getElementById('gr-previsiones')?.value||0)||0;
   const otrosDed = parseFloat(document.getElementById('gr-otros-ded')?.value||0)||0;
@@ -5488,7 +5508,8 @@ function ganRecalcular(){
   const alqBruto       = parseFloat(document.getElementById('gr-alq-bruto')?.value||0)||0;
   const alqRetenciones = parseFloat(document.getElementById('gr-alq-retenciones')?.value||0)||0;
   const otrosNoAlc     = parseFloat(document.getElementById('gr-otros-noalc')?.value||0)||0;
-  const totalNoAlc     = monoIngresos + depBruto + alqBruto + otrosNoAlc;
+  const ivaOtrosVentas2 = parseFloat(document.getElementById('gr-iva-otros-ventas')?.value||0)||0;
+  const totalNoAlc     = monoIngresos + depBruto + alqBruto + otrosNoAlc + ivaOtrosVentas2;
 
   // ── Actualizar DOM resultado ──────────────────────────────────
   const set = (id,val) => { const el=document.getElementById(id); if(el) el.textContent=fmtPesos(val); };
@@ -5500,6 +5521,12 @@ function ganRecalcular(){
   set('gr-resultado-bruto', resBruto);
   set('gr-gastos-ded', gastosLIB);
   set('gr-total-ded', totalDed);
+
+  // Informativo: IVA + otros impuestos de compras (no resta de base)
+  const ivaOtrosCompras = GAN.compras.reduce((s,c)=>s+(c.iva||0)+(c.otrosImp||0),0);
+  set('gr-iva-otros-compras', ivaOtrosCompras);
+
+
   set('gr-total-noalc', totalNoAlc);
 
   const finEl = document.getElementById('gr-resultado-final');
@@ -5572,11 +5599,12 @@ function ganDescargarExcel(){
     const depBruto=gv('gr-dep-bruto'), depRet=gv('gr-dep-retenciones'), depAp=gv('gr-dep-aportes');
     const alqBruto=gv('gr-alq-bruto'), alqRet=gv('gr-alq-retenciones');
     const otrosNA=gv('gr-otros-noalc');
+    const ivaOtrosV=gv('gr-iva-otros-ventas');
     const otrosDesc = document.getElementById('gr-otros-desc')?.value||'';
 
-    const ventasNetas = GAN.ventas.reduce((s,v)=>s+(v.neto||0),0);
-    const costosPer   = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+(c.neto||0),0);
-    const gastosLIB   = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+(c.neto||0),0);
+    const ventasNetas = GAN.ventas.reduce((s,v)=>s+(v.total||0)-(v.iva21||0)-(v.iva105||0)-(v.otrosImp||0),0);
+    const costosPer   = GAN.compras.filter(c=>c.clasif==='Costo').reduce((s,c)=>s+(c.total||0)-(c.iva||0)-(c.otrosImp||0),0);
+    const gastosLIB   = GAN.compras.filter(c=>c.clasif==='Deducible').reduce((s,c)=>s+(c.total||0)-(c.iva||0)-(c.otrosImp||0),0);
     const deducPers   = GAN.deducciones.filter(d=>d.aplica).reduce((s,d)=>s+d.monto,0);
     const ingNetos    = ventasNetas - dv;
     const costoVentas = eI + costosPer - eF;
@@ -5630,7 +5658,8 @@ function ganDescargarExcel(){
       ['Alquileres — ingresos brutos',alqBruto,''],
       ['Alquileres — retenciones/anticipos',alqRet,''],
       [otrosDesc||'Otros no alcanzados',otrosNA,''],
-      ['= TOTAL NO ALCANZADOS',monoIng+depBruto+alqBruto+otrosNA,''],
+      ['IVA + Otros impuestos de ventas',ivaOtrosV,''],
+      ['= TOTAL NO ALCANZADOS',monoIng+depBruto+alqBruto+otrosNA+ivaOtrosV,''],
     ];
     const wsR = XLSX.utils.aoa_to_sheet(hr);
     wsR['!cols'] = [{wch:52},{wch:22},{wch:26}];

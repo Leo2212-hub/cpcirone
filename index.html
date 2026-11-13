@@ -6587,7 +6587,7 @@ async function testApiKey(){
     const r = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:10,messages:[{role:'user',content:'hola'}]})
+      body:JSON.stringify({model:'claude-sonnet-5-5',max_tokens:10,messages:[{role:'user',content:'hola'}]})
     });
     const d = await r.json();
     if(d.error) throw new Error(d.error.message);
@@ -6638,7 +6638,7 @@ async function factLeerPDF(input, idx){
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5-5',
         max_tokens: 1000,
         system: `Sos un asistente especializado en leer facturas argentinas. 
 Extraé los datos y respondé ÚNICAMENTE con un JSON válido, sin texto adicional, sin markdown, sin backticks.
